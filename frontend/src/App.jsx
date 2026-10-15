@@ -2,7 +2,7 @@ import { useState } from 'react';
 import heroImage from './assets/hero.png';
 import './App.css';
 
-// CHANGED: Replaced the default Vite screen with the Safari Planner homepage.
+// CHANGED: Safari Planner homepage with a connected trip-planning form.
 const destinations = [
   {
     name: 'Maasai Mara',
@@ -48,12 +48,6 @@ function Icon({ name, size = 20 }) {
         <path d="M16 3v4M8 3v4M3 10h18" />
       </>
     ),
-    search: (
-      <>
-        <circle cx="10.5" cy="10.5" r="6.5" />
-        <path d="m16 16 4 4" />
-      </>
-    ),
     leaf: (
       <>
         <path d="M20 4C10 4 4 8 4 15a5 5 0 0 0 5 5c7 0 11-7 11-16Z" />
@@ -84,6 +78,7 @@ function Icon({ name, size = 20 }) {
 
 function App() {
   const [mobileOpen, setMobileOpen] = useState(false);
+
   const [trip, setTrip] = useState({
     destination: '',
     startDate: '',
@@ -91,14 +86,25 @@ function App() {
     travelStyle: 'Wildlife & Safari',
     budget: '',
   });
+
+  // ADDED: Track API submission state and the response from Flask.
+  const [isSaving, setIsSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
+  const [savedPreference, setSavedPreference] = useState(null);
 
   const updateTrip = (event) => {
+    const { name, value } = event.target;
+
     setTrip((previous) => ({
       ...previous,
-      [event.target.name]: event.target.value,
+      [name]: value,
     }));
+
+    // ADDED: Clear outdated feedback when the form changes.
     setSubmitted(false);
+    setError('');
+    setSavedPreference(null);
   };
 
   const scrollToPlanner = () => {
@@ -108,9 +114,58 @@ function App() {
     setMobileOpen(false);
   };
 
-  const submitTrip = (event) => {
+  // CHANGED: Submit the form to the Flask API instead of showing a preview.
+  const submitTrip = async (event) => {
     event.preventDefault();
-    setSubmitted(true);
+
+    if (trip.endDate < trip.startDate) {
+      setError('The end date cannot be before the start date.');
+      return;
+    }
+
+    setIsSaving(true);
+    setSubmitted(false);
+    setError('');
+    setSavedPreference(null);
+
+    try {
+      const response = await fetch(
+        'http://127.0.0.1:5000/api/trip-preferences',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            destination: trip.destination.trim(),
+            start_date: trip.startDate,
+            end_date: trip.endDate,
+            travel_style: trip.travelStyle,
+            budget: trip.budget === '' ? null : Number(trip.budget),
+          }),
+        },
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.error || 'Unable to save your trip preferences.',
+        );
+      }
+
+      // ADDED: Use the actual saved record returned by the backend.
+      setSavedPreference(result.preference);
+      setSubmitted(true);
+    } catch (err) {
+      setError(
+        err.message === 'Failed to fetch'
+          ? 'Could not reach Safari Planner. Check that the Flask server is running on port 5000.'
+          : err.message || 'Something went wrong. Please try again.',
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -250,6 +305,7 @@ function App() {
                     <Icon name="arrow" size={19} />
                   </span>
                 </button>
+
                 <div className="destination-card__body">
                   <span className="destination-card__category">
                     {destination.category}
@@ -302,6 +358,7 @@ function App() {
               you, set your own pace, and bring your ideas together in one
               thoughtful travel plan.
             </p>
+
             <div className="philosophy__points">
               <div>
                 <span>01</span>
@@ -325,6 +382,7 @@ function App() {
                 </p>
               </div>
             </div>
+
             <button className="button button--dark" onClick={scrollToPlanner}>
               Let's plan something <Icon name="arrow" size={17} />
             </button>
@@ -358,6 +416,7 @@ function App() {
                   value={trip.destination}
                   onChange={updateTrip}
                   placeholder="Where would you love to go?"
+                  maxLength={150}
                   required
                 />
               </span>
@@ -377,6 +436,7 @@ function App() {
                   />
                 </span>
               </label>
+
               <label>
                 End date
                 <span className="input-wrap">
@@ -414,27 +474,40 @@ function App() {
                 name="budget"
                 type="number"
                 min="0"
-                step="1000"
+                step="0.01"
                 value={trip.budget}
                 onChange={updateTrip}
                 placeholder="e.g. 50000"
               />
             </label>
 
-            <button className="button button--gold planner-form__submit" type="submit">
-              Save my preferences <Icon name="arrow" size={17} />
+            <button
+              className="button button--gold planner-form__submit"
+              type="submit"
+              disabled={isSaving}
+            >
+              {isSaving ? 'Saving preferences…' : 'Save my preferences'}
+              {!isSaving && <Icon name="arrow" size={17} />}
             </button>
 
-            {submitted && (
+            {/* ADDED: Real success and error feedback from the API request. */}
+            {submitted && savedPreference && (
               <div className="planner-feedback" role="status">
-                <strong>Your trip preferences are ready.</strong>
+                <strong>Your preferences have been saved!</strong>
                 <p>
-                  {trip.destination} · {trip.travelStyle}
+                  {savedPreference.destination} · {savedPreference.travel_style}
                 </p>
                 <small>
-                  This is a frontend preview. Next we'll connect these
-                  preferences to the Flask itinerary API.
+                  Reference: #{savedPreference.id}. Your trip preferences are
+                  now stored in Safari Planner.
                 </small>
+              </div>
+            )}
+
+            {error && (
+              <div className="planner-feedback planner-feedback--error" role="alert">
+                <strong>We couldn't save your trip.</strong>
+                <p>{error}</p>
               </div>
             )}
           </form>
@@ -451,6 +524,7 @@ function App() {
             <small>YOUR JOURNEY, CURATED</small>
           </span>
         </a>
+
         <p>Thoughtful journeys. Lasting stories.</p>
         <span className="site-footer__copyright">
           © {new Date().getFullYear()} Safari Planner

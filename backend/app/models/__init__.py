@@ -194,3 +194,22 @@ class SavedDestination(db.Model):
 
     user = db.relationship("User", back_populates="saved_destinations")
     destination = db.relationship("Destination", back_populates="saved_by")
+
+
+class TripPreference(db.Model):
+    """A visitor's submitted travel preferences."""
+
+    __tablename__ = "trip_preferences"
+
+    id = db.Column(db.Integer, primary_key=True)
+    destination = db.Column(db.String(150), nullable=False)
+    start_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date, nullable=False)
+    travel_style = db.Column(
+        db.String(80), default="Wildlife & Safari", nullable=False
+    )
+    budget = db.Column(db.Numeric(12, 2))
+    status = db.Column(db.String(30), default="received", nullable=False)
+    created_at = db.Column(
+        db.DateTime(timezone=True), default=utc_now, nullable=False
+    )

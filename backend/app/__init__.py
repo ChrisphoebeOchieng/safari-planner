@@ -1,9 +1,10 @@
-"""Safari Planner application factory."""
+"""Safari Planner Flask application factory."""
 
 from flask import Flask
 
 from .config import Config
 from .extensions import cors, db, jwt, migrate
+from . import models  # Register models for database migrations.
 from .routes.health import health_bp
 
 

@@ -758,6 +758,118 @@ function App() {
             </p>
           </div>
 
+          {selectedItineraryLoading && (
+            <p className="saved-trips__message" role="status">
+              Opening your saved itinerary...
+            </p>
+          )}
+
+          {selectedItineraryError && (
+            <p className="saved-trips__message" role="alert">
+              {selectedItineraryError}
+            </p>
+          )}
+
+          {selectedItinerary?.plan && (
+            <section
+              className="saved-itinerary-detail"
+              aria-labelledby="saved-itinerary-detail-title"
+            >
+              <button
+                className="saved-itinerary-detail__back"
+                type="button"
+                onClick={() => {
+                  setSelectedItinerary(null);
+                  setSelectedItineraryError("");
+                }}
+              >
+                <Icon name="arrowLeft" size={16} />
+                Back to saved trips
+              </button>
+
+              <div className="saved-itinerary-detail__header">
+                <span className="eyebrow">
+                  <span className="eyebrow__line" />
+                  YOUR JOURNEY, CURATED
+                </span>
+                <h3 id="saved-itinerary-detail-title">
+                  {selectedItinerary.plan.destination}
+                </h3>
+                <p>
+                  {selectedItinerary.plan.destination_details?.region ||
+                    selectedItinerary.plan.destination_details?.country ||
+                    "Your saved destination"}
+                  {" · "}
+                  {selectedItinerary.plan.duration_days}{" "}
+                  {selectedItinerary.plan.duration_days === 1 ? "day" : "days"}
+                </p>
+              </div>
+
+              <div className="saved-itinerary-detail__summary">
+                <span>
+                  <strong>Start date</strong>
+                  {selectedItinerary.plan.start_date}
+                </span>
+                <span>
+                  <strong>End date</strong>
+                  {selectedItinerary.plan.end_date}
+                </span>
+                <span>
+                  <strong>Travel style</strong>
+                  {selectedItinerary.plan.travel_style || "Not specified"}
+                </span>
+                <span>
+                  <strong>Total budget</strong>
+                  {selectedItinerary.plan.budget_kes == null
+                    ? "Not specified"
+                    : `KES ${Number(
+                        selectedItinerary.plan.budget_kes,
+                      ).toLocaleString("en-KE")}`}
+                </span>
+              </div>
+
+              <div className="saved-itinerary-detail__days">
+                {(selectedItinerary.plan.days || []).map((day) => (
+                  <article
+                    className="itinerary-day"
+                    key={`${day.day}-${day.date}`}
+                  >
+                    <div className="itinerary-day__heading">
+                      <span className="itinerary-day__number">
+                        {String(day.day).padStart(2, "0")}
+                      </span>
+                      <div>
+                        <h4>Day {day.day}</h4>
+                        <p>{day.date}</p>
+                      </div>
+                    </div>
+
+                    <div className="itinerary-day__activities">
+                      {(day.activities || []).map((activity, index) => (
+                        <div
+                          className="itinerary-activity"
+                          key={`${day.day}-${activity.time}-${index}`}
+                        >
+                          <span className="itinerary-activity__time">
+                            {activity.time}
+                          </span>
+                          <div>
+                            <h5>{activity.title}</h5>
+                            <p>{activity.description}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </article>
+                ))}
+              </div>
+
+              <p className="generated-itinerary__notice">
+                {selectedItinerary.plan.notice}
+              </p>
+            </section>
+          )}
+
           {savedItinerariesLoading ? (
             <p className="saved-trips__message" role="status">
               Loading your saved trips...

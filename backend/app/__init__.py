@@ -2,9 +2,10 @@
 
 from flask import Flask
 
+from . import models
 from .config import Config
 from .extensions import cors, db, jwt, migrate
-from . import models  # Register models for migrations.
+from .routes.destinations import destinations_bp
 from .routes.health import health_bp
 from .routes.trip_preferences import trip_preferences_bp
 
@@ -29,5 +30,6 @@ def create_app(config_class=Config):
 
     app.register_blueprint(health_bp, url_prefix="/api")
     app.register_blueprint(trip_preferences_bp, url_prefix="/api")
+    app.register_blueprint(destinations_bp, url_prefix="/api")
 
     return app

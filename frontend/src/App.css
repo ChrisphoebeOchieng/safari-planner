@@ -923,3 +923,12 @@
     animation-duration: 0.01ms !important;
   }
 }
+
+
+/* ADDED: Destination API loading, empty and error states. */
+.destination-status {
+  margin: 0 0 24px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.8;
+}

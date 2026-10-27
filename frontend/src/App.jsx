@@ -1,32 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import heroImage from './assets/hero.png';
 import './App.css';
 
-// CHANGED: Safari Planner homepage with a connected trip-planning form.
-const destinations = [
-  {
-    name: 'Maasai Mara',
-    location: 'Narok County, Kenya',
-    category: 'WILDLIFE & SAFARI',
-    image:
-      'https://images.unsplash.com/photo-1516426122078-c23e76319801?auto=format&fit=crop&w=900&q=85',
-  },
-  {
-    name: 'Lake Bogoria',
-    location: 'Baringo County, Kenya',
-    category: 'NATURE & ADVENTURE',
-    image:
-      'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=85',
-  },
-  {
-    name: 'Diani Beach',
-    location: 'Kwale County, Kenya',
-    category: 'COASTAL ESCAPE',
-    image:
-      'https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?auto=format&fit=crop&w=900&q=85',
-  },
-];
+// ADDED: Override this through VITE_API_BASE_URL when deploying.
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:5000/api';
 
+// CHANGED: Safari Planner homepage with a connected trip-planning form.
 function Icon({ name, size = 20 }) {
   const paths = {
     compass: (
@@ -78,6 +58,51 @@ function Icon({ name, size = 20 }) {
 
 function App() {
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // ADDED: Destination data and API loading states.
+  const [destinations, setDestinations] = useState([]);
+  const [destinationsLoading, setDestinationsLoading] = useState(true);
+  const [destinationsError, setDestinationsError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadDestinations() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/destinations`);
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Unable to load destinations.');
+        }
+
+        if (!cancelled) {
+          setDestinations(
+            Array.isArray(result.destinations) ? result.destinations : [],
+          );
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setDestinationsError(
+            error.message === 'Failed to fetch'
+              ? 'Could not load destinations. Check that the Flask server is running.'
+              : error.message || 'Unable to load destinations.',
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setDestinationsLoading(false);
+        }
+      }
+    }
+
+    loadDestinations();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
 
   const [trip, setTrip] = useState({
     destination: '',
@@ -285,6 +310,26 @@ function App() {
             </p>
           </div>
 
+          {destinationsLoading && (
+            <p className="destination-status" role="status">
+              Discovering destinations...
+            </p>
+          )}
+
+          {destinationsError && (
+            <p className="destination-status" role="alert">
+              {destinationsError}
+            </p>
+          )}
+
+          {!destinationsLoading &&
+            !destinationsError &&
+            destinations.length === 0 && (
+              <p className="destination-status">
+                No destinations are available yet.
+              </p>
+            )}
+
           <div className="destination-grid">
             {destinations.map((destination, index) => (
               <article className="destination-card" key={destination.name}>
@@ -294,9 +339,13 @@ function App() {
                   aria-label={`Plan a trip to ${destination.name}`}
                 >
                   <img
-                    src={destination.image}
+                    src={destination.image_url || heroImage}
                     alt={destination.name}
                     loading="lazy"
+                    onError={(event) => {
+                      event.currentTarget.onerror = null;
+                      event.currentTarget.src = heroImage;
+                    }}
                   />
                   <span className="destination-card__number">
                     0{index + 1}
@@ -313,7 +362,7 @@ function App() {
                   <h3>{destination.name}</h3>
                   <p>
                     <Icon name="pin" size={15} />
-                    {destination.location}
+                    {[destination.region, destination.country].filter(Boolean).join(', ')}
                   </p>
                 </div>
               </article>
@@ -328,7 +377,7 @@ function App() {
         <section className="philosophy" id="why-us">
           <div className="philosophy__visual">
             <img
-              src={destinations[0].image}
+              src={destinations[0]?.image_url || heroImage}
               alt="Wildlife in an African landscape"
               loading="lazy"
             />

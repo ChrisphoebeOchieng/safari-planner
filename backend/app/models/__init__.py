@@ -213,3 +213,21 @@ class TripPreference(db.Model):
     created_at = db.Column(
         db.DateTime(timezone=True), default=utc_now, nullable=False
     )
+
+
+class GeneratedItinerary(db.Model):
+    """A generated travel plan saved against submitted trip preferences."""
+
+    __tablename__ = "generated_itineraries"
+
+    id = db.Column(db.Integer, primary_key=True)
+    trip_preference_id = db.Column(
+        db.Integer,
+        db.ForeignKey("trip_preferences.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
+    )
+    plan = db.Column(db.JSON, nullable=False)
+    created_at = db.Column(
+        db.DateTime(timezone=True), default=utc_now, nullable=False
+    )

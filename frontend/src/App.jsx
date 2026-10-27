@@ -64,6 +64,10 @@ function App() {
   const [destinationsLoading, setDestinationsLoading] = useState(true);
   const [destinationsError, setDestinationsError] = useState('');
 
+  const [savedItineraries, setSavedItineraries] = useState([]);
+  const [savedItinerariesLoading, setSavedItinerariesLoading] = useState(true);
+  const [savedItinerariesError, setSavedItinerariesError] = useState("");
+
   useEffect(() => {
     let cancelled = false;
 
@@ -117,6 +121,80 @@ function App() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
   const [savedPreference, setSavedPreference] = useState(null);
+  const [generatedItinerary, setGeneratedItinerary] = useState(null);
+  const [selectedItinerary, setSelectedItinerary] = useState(null);
+  const [selectedItineraryLoading, setSelectedItineraryLoading] = useState(false);
+  const [selectedItineraryError, setSelectedItineraryError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSavedItineraries() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/itineraries`);
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            result.error || "Unable to load saved itineraries."
+          );
+        }
+
+        if (!cancelled) {
+          setSavedItineraries(
+            Array.isArray(result.itineraries) ? result.itineraries : []
+          );
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setSavedItinerariesError(
+            err.message === "Failed to fetch"
+              ? "Saved trips are temporarily unavailable. Please try again later."
+              : err.message || "Unable to load saved itineraries."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setSavedItinerariesLoading(false);
+        }
+      }
+    }
+
+    loadSavedItineraries();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function openSavedItinerary(itineraryId) {
+    setSelectedItineraryLoading(true);
+    setSelectedItineraryError("");
+    setSelectedItinerary(null);
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/itineraries/${itineraryId}`
+      );
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.error || "Unable to open this saved itinerary."
+        );
+      }
+
+      setSelectedItinerary(result);
+    } catch (err) {
+      setSelectedItineraryError(
+        err.message === "Failed to fetch"
+          ? "The itinerary service is unavailable. Please try again."
+          : err.message || "Unable to open this saved itinerary."
+      );
+    } finally {
+      setSelectedItineraryLoading(false);
+    }
+  }
 
   const updateTrip = (event) => {
     const { name, value } = event.target;
@@ -130,6 +208,7 @@ function App() {
     setSubmitted(false);
     setError('');
     setSavedPreference(null);
+    setGeneratedItinerary(null);
   };
 
   const scrollToPlanner = () => {
@@ -144,49 +223,70 @@ function App() {
     event.preventDefault();
 
     if (trip.endDate < trip.startDate) {
-      setError('The end date cannot be before the start date.');
+      setError("The end date cannot be before the start date.");
       return;
     }
 
     setIsSaving(true);
     setSubmitted(false);
-    setError('');
+    setError("");
     setSavedPreference(null);
+    setGeneratedItinerary(null);
+
+    let preferencesSaved = false;
 
     try {
-      const response = await fetch(
-        'http://127.0.0.1:5000/api/trip-preferences',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            destination: trip.destination.trim(),
-            start_date: trip.startDate,
-            end_date: trip.endDate,
-            travel_style: trip.travelStyle,
-            budget: trip.budget === '' ? null : Number(trip.budget),
-          }),
+      const response = await fetch(`${API_BASE_URL}/trip-preferences`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({
+          destination: trip.destination.trim(),
+          start_date: trip.startDate,
+          end_date: trip.endDate,
+          travel_style: trip.travelStyle,
+          budget: trip.budget === "" ? null : Number(trip.budget),
+        }),
+      });
 
       const result = await response.json();
 
       if (!response.ok) {
         throw new Error(
-          result.error || 'Unable to save your trip preferences.',
+          result.error || "Unable to save your trip preferences."
         );
       }
 
-      // ADDED: Use the actual saved record returned by the backend.
+      preferencesSaved = true;
       setSavedPreference(result.preference);
+
+      // Generate and save an itinerary using the new preference ID.
+      const itineraryResponse = await fetch(
+        `${API_BASE_URL}/trip-preferences/${result.preference.id}/generate`,
+        { method: "POST" }
+      );
+
+      const itineraryResult = await itineraryResponse.json();
+
+      if (!itineraryResponse.ok) {
+        throw new Error(
+          itineraryResult.error || "Unable to generate your itinerary."
+        );
+      }
+
+      setGeneratedItinerary(itineraryResult);
       setSubmitted(true);
     } catch (err) {
+      const message =
+        err.message === "Failed to fetch"
+          ? "Could not reach Safari Planner. Check that Flask is running on port 5000."
+          : err.message || "Something went wrong. Please try again.";
+
       setError(
-        err.message === 'Failed to fetch'
-          ? 'Could not reach Safari Planner. Check that the Flask server is running on port 5000.'
-          : err.message || 'Something went wrong. Please try again.',
+        preferencesSaved
+          ? `Your preferences were saved, but itinerary generation failed: ${message}`
+          : message
       );
     } finally {
       setIsSaving(false);
@@ -535,20 +635,21 @@ function App() {
               type="submit"
               disabled={isSaving}
             >
-              {isSaving ? 'Saving preferences…' : 'Save my preferences'}
+              {isSaving ? 'Generating itinerary…' : 'Generate my itinerary'}
               {!isSaving && <Icon name="arrow" size={17} />}
             </button>
 
             {/* ADDED: Real success and error feedback from the API request. */}
-            {submitted && savedPreference && (
+            {submitted && savedPreference && generatedItinerary && (
               <div className="planner-feedback" role="status">
-                <strong>Your preferences have been saved!</strong>
+                <strong>Your itinerary has been generated.</strong>
                 <p>
                   {savedPreference.destination} · {savedPreference.travel_style}
                 </p>
                 <small>
-                  Reference: #{savedPreference.id}. Your trip preferences are
-                  now stored in Safari Planner.
+                  Itinerary #{generatedItinerary.itinerary_id}. Your
+                  {` ${generatedItinerary.plan.duration_days}-day `}
+                  plan has been saved and is ready to review.
                 </small>
               </div>
             )}
@@ -559,7 +660,181 @@ function App() {
                 <p>{error}</p>
               </div>
             )}
+
+            {submitted && generatedItinerary?.plan && (
+              <section
+                className="generated-itinerary"
+                aria-labelledby="generated-itinerary-title"
+              >
+                <div className="generated-itinerary__header">
+                  <p className="eyebrow">YOUR JOURNEY, CURATED</p>
+                  <h3 id="generated-itinerary-title">
+                    Your {generatedItinerary.plan.duration_days}-day itinerary
+                  </h3>
+                  <p>
+                    {generatedItinerary.plan.destination}
+                    {generatedItinerary.plan.destination_details?.region
+                      ? ` · ${generatedItinerary.plan.destination_details.region}`
+                      : ""}
+                  </p>
+                  <div className="generated-itinerary__summary">
+                    <span>
+                      <strong>Start</strong>
+                      {generatedItinerary.plan.start_date}
+                    </span>
+                    <span>
+                      <strong>End</strong>
+                      {generatedItinerary.plan.end_date}
+                    </span>
+                    <span>
+                      <strong>Budget</strong>
+                      {generatedItinerary.plan.budget_kes == null
+                        ? "Not specified"
+                        : `KES ${Number(
+                            generatedItinerary.plan.budget_kes,
+                          ).toLocaleString("en-KE")}`}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="generated-itinerary__days">
+                  {generatedItinerary.plan.days.map((day) => (
+                    <article
+                      className="itinerary-day"
+                      key={`${day.day}-${day.date}`}
+                    >
+                      <div className="itinerary-day__heading">
+                        <span className="itinerary-day__number">
+                          {String(day.day).padStart(2, "0")}
+                        </span>
+                        <div>
+                          <h4>Day {day.day}</h4>
+                          <p>{day.date}</p>
+                        </div>
+                      </div>
+
+                      <div className="itinerary-day__activities">
+                        {day.activities.map((activity, index) => (
+                          <div
+                            className="itinerary-activity"
+                            key={`${day.day}-${activity.time}-${index}`}
+                          >
+                            <span className="itinerary-activity__time">
+                              {activity.time}
+                            </span>
+                            <div>
+                              <h5>{activity.title}</h5>
+                              <p>{activity.description}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+
+                <p className="generated-itinerary__notice">
+                  {generatedItinerary.plan.notice}
+                </p>
+              </section>
+            )}
           </form>
+        </section>
+
+        <section className="saved-trips section-shell" id="saved-trips">
+          <div className="saved-trips__heading">
+            <span className="eyebrow">
+              <span className="eyebrow__line" />
+              YOUR TRAVEL COLLECTION
+            </span>
+            <h2>
+              Journeys worth
+              <br />
+              <em>keeping.</em>
+            </h2>
+            <p>
+              Revisit the travel plans you've created and keep your next
+              adventure within reach.
+            </p>
+          </div>
+
+          {savedItinerariesLoading ? (
+            <p className="saved-trips__message" role="status">
+              Loading your saved trips...
+            </p>
+          ) : savedItinerariesError ? (
+            <p className="saved-trips__message" role="alert">
+              {savedItinerariesError}
+            </p>
+          ) : savedItineraries.length === 0 ? (
+            <div className="saved-trips__empty">
+              <h3>Your next story starts here.</h3>
+              <p>
+                You haven't saved an itinerary yet. Start planning a journey
+                and it will appear here.
+              </p>
+              <button
+                className="button button--dark"
+                onClick={scrollToPlanner}
+                type="button"
+              >
+                Plan your first trip <Icon name="arrow" size={17} />
+              </button>
+            </div>
+          ) : (
+            <div className="saved-trips__grid">
+              {savedItineraries.map((itinerary) => (
+                <article
+                  className="saved-trip-card"
+                  key={itinerary.itinerary_id}
+                >
+                  <div className="saved-trip-card__top">
+                    <span>
+                      {itinerary.destination_details?.region ||
+                        itinerary.destination_details?.country ||
+                        "Kenya"}
+                    </span>
+                    <span>
+                      {itinerary.duration_days}{" "}
+                      {itinerary.duration_days === 1 ? "day" : "days"}
+                    </span>
+                  </div>
+                  <h3>{itinerary.destination || "Untitled journey"}</h3>
+                  <p className="saved-trip-card__dates">
+                    {itinerary.start_date || "Date not set"}
+                    {itinerary.end_date ? ` — ${itinerary.end_date}` : ""}
+                  </p>
+                  <div className="saved-trip-card__details">
+                    <span>
+                      <strong>Travel style</strong>
+                      {itinerary.travel_style || "Not specified"}
+                    </span>
+                    <span>
+                      <strong>Estimated budget</strong>
+                      {itinerary.budget_kes == null
+                        ? "Not specified"
+                        : `KES ${Number(
+                            itinerary.budget_kes,
+                          ).toLocaleString("en-KE")}`}
+                    </span>
+                  </div>
+                  <p className="saved-trip-card__reference">
+                    Itinerary #{itinerary.itinerary_id}
+                  </p>
+                  <button
+                    className="saved-trip-card__action"
+                    type="button"
+                    onClick={() =>
+                      openSavedItinerary(itinerary.itinerary_id)
+                    }
+                    disabled={selectedItineraryLoading}
+                  >
+                    View itinerary <Icon name="arrowRight" size={16} />
+                  </button>
+                </article>
+              ))}
+            </div>
+          )}
         </section>
       </main>
 

@@ -125,6 +125,8 @@ function App() {
   const [selectedItinerary, setSelectedItinerary] = useState(null);
   const [selectedItineraryLoading, setSelectedItineraryLoading] = useState(false);
   const [selectedItineraryError, setSelectedItineraryError] = useState("");
+  const [deletingItineraryId, setDeletingItineraryId] = useState(null);
+  const [deleteItineraryError, setDeleteItineraryError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -193,6 +195,49 @@ function App() {
       );
     } finally {
       setSelectedItineraryLoading(false);
+    }
+  }
+
+  async function deleteSavedItinerary(itineraryId) {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this saved itinerary? This cannot be undone."
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingItineraryId(itineraryId);
+    setDeleteItineraryError("");
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/itineraries/${itineraryId}`,
+        { method: "DELETE" }
+      );
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.error || "Unable to delete this saved itinerary."
+        );
+      }
+
+      setSavedItineraries((previous) =>
+        previous.filter((item) => item.itinerary_id !== itineraryId)
+      );
+
+      if (selectedItinerary?.itinerary_id === itineraryId) {
+        setSelectedItinerary(null);
+      }
+    } catch (err) {
+      setDeleteItineraryError(
+        err.message === "Failed to fetch"
+          ? "The itinerary service is unavailable. Please try again."
+          : err.message || "Unable to delete this saved itinerary."
+      );
+    } finally {
+      setDeletingItineraryId(null);
     }
   }
 
@@ -870,6 +915,12 @@ function App() {
             </section>
           )}
 
+          {deleteItineraryError && (
+            <p className="saved-trips__message" role="alert">
+              {deleteItineraryError}
+            </p>
+          )}
+
           {savedItinerariesLoading ? (
             <p className="saved-trips__message" role="status">
               Loading your saved trips...
@@ -933,16 +984,36 @@ function App() {
                   <p className="saved-trip-card__reference">
                     Itinerary #{itinerary.itinerary_id}
                   </p>
-                  <button
-                    className="saved-trip-card__action"
-                    type="button"
-                    onClick={() =>
-                      openSavedItinerary(itinerary.itinerary_id)
-                    }
-                    disabled={selectedItineraryLoading}
-                  >
-                    View itinerary <Icon name="arrowRight" size={16} />
-                  </button>
+                  <div className="saved-trip-card__actions">
+                    <button
+                      className="saved-trip-card__action"
+                      type="button"
+                      onClick={() =>
+                        openSavedItinerary(itinerary.itinerary_id)
+                      }
+                      disabled={
+                        selectedItineraryLoading ||
+                        deletingItineraryId !== null
+                      }
+                    >
+                      View itinerary <Icon name="arrowRight" size={16} />
+                    </button>
+                    <button
+                      className="saved-trip-card__delete"
+                      type="button"
+                      onClick={() =>
+                        deleteSavedItinerary(itinerary.itinerary_id)
+                      }
+                      disabled={
+                        deletingItineraryId !== null ||
+                        selectedItineraryLoading
+                      }
+                    >
+                      {deletingItineraryId === itinerary.itinerary_id
+                        ? "Deleting..."
+                        : "Delete trip"}
+                    </button>
+                  </div>
                 </article>
               ))}
             </div>

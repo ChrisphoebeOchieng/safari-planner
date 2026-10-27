@@ -302,3 +302,29 @@ def list_itineraries():
         return jsonify({
             "error": "Unable to retrieve saved itineraries right now."
         }), 500
+
+@itineraries_bp.delete("/itineraries/<int:itinerary_id>")
+def delete_itinerary(itinerary_id):
+    """Delete a saved generated itinerary."""
+    saved = db.session.get(GeneratedItinerary, itinerary_id)
+
+    if saved is None:
+        return jsonify({"error": "Itinerary not found."}), 404
+
+    try:
+        db.session.delete(saved)
+        db.session.commit()
+
+        return jsonify({
+            "message": "Saved itinerary deleted successfully.",
+            "itinerary_id": itinerary_id,
+        }), 200
+
+    except SQLAlchemyError:
+        db.session.rollback()
+        current_app.logger.exception(
+            "Failed to delete saved itinerary."
+        )
+        return jsonify({
+            "error": "Unable to delete the itinerary right now."
+        }), 500

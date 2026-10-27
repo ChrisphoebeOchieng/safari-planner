@@ -1474,3 +1474,48 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Saved trip actions */
+.saved-trip-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.saved-trip-card__actions .saved-trip-card__action {
+  margin-top: 0;
+}
+
+.saved-trip-card__delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 10px 14px;
+  border: 1px solid #d8c9bd;
+  background: transparent;
+  color: #8a4c40;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 180ms ease, border-color 180ms ease;
+}
+
+.saved-trip-card__delete:hover:not(:disabled) {
+  border-color: #b77b6d;
+  background: #f7eae5;
+}
+
+.saved-trip-card__delete:disabled,
+.saved-trip-card__action:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.saved-trip-card__delete:focus-visible,
+.saved-trip-card__action:focus-visible {
+  outline: 2px solid #8b6228;
+  outline-offset: 3px;
+}

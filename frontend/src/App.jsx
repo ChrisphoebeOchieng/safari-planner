@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import heroImage from './assets/hero.png';
 import './App.css';
 
@@ -63,10 +64,41 @@ function App() {
   const [destinations, setDestinations] = useState([]);
   const [destinationsLoading, setDestinationsLoading] = useState(true);
   const [destinationsError, setDestinationsError] = useState('');
+  const [destinationSearch, setDestinationSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+
+  const destinationCategories = [
+    ...new Set(
+      destinations
+        .map((destination) => destination.category)
+        .filter(Boolean)
+    ),
+  ].sort();
+
+  const filteredDestinations = destinations.filter((destination) => {
+    const searchText = destinationSearch.trim().toLowerCase();
+
+    const matchesSearch = [
+      destination.name,
+      destination.region,
+      destination.country,
+      destination.description,
+    ]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(searchText));
+
+    const matchesCategory =
+      selectedCategory === 'All' ||
+      destination.category === selectedCategory;
+
+    return matchesSearch && matchesCategory;
+  });
 
   const [savedItineraries, setSavedItineraries] = useState([]);
   const [savedItinerariesLoading, setSavedItinerariesLoading] = useState(true);
   const [savedItinerariesError, setSavedItinerariesError] = useState("");
+  const [tripSearch, setTripSearch] = useState("");
+  const [tripFilter, setTripFilter] = useState("all");
 
   useEffect(() => {
     let cancelled = false;
@@ -469,10 +501,73 @@ function App() {
     }
   };
 
+
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const destinationId = pathname.split("/")[2];
+
+  const isHomePage = pathname === "/";
+  const isExplorePage = pathname === "/explore";
+  const isPlannerPage = pathname === "/plan-trip";
+  const isMyTripsPage = pathname === "/my-trips";
+  const isDestinationPage = pathname.startsWith("/destinations/");
+
+  const currentDestination = destinations.find(
+    (destination) => String(destination.id) === String(destinationId)
+  );
+
+  const now = new Date();
+  const today = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, "0"),
+    String(now.getDate()).padStart(2, "0"),
+  ].join("-");
+
+  const getTripStatus = (itinerary) => {
+    if (!itinerary.start_date || !itinerary.end_date) return "pending";
+    if (itinerary.end_date < today) return "past";
+    if (itinerary.start_date > today) return "upcoming";
+    return "ongoing";
+  };
+
+  const upcomingTrips = savedItineraries.filter(
+    (trip) => getTripStatus(trip) === "upcoming"
+  ).length;
+
+  const ongoingTrips = savedItineraries.filter(
+    (trip) => getTripStatus(trip) === "ongoing"
+  ).length;
+
+  const pastTrips = savedItineraries.filter(
+    (trip) => getTripStatus(trip) === "past"
+  ).length;
+
+  const filteredSavedItineraries = savedItineraries.filter((itinerary) => {
+    const query = tripSearch.trim().toLowerCase();
+    const matchesSearch = [
+      itinerary.destination,
+      itinerary.destination_details?.region,
+      itinerary.destination_details?.country,
+      itinerary.travel_style,
+    ]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(query));
+
+    const status = getTripStatus(itinerary);
+    const matchesFilter = tripFilter === "all" || status === tripFilter;
+
+    return matchesSearch && matchesFilter;
+  });
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+    setMobileOpen(false);
+  }, [pathname]);
+
   return (
     <>
       <header className="site-header">
-        <a className="brand" href="#home" aria-label="Safari Planner home">
+        <Link className="brand" to="/" aria-label="Safari Planner home">
           <span className="brand__mark">
             <Icon name="compass" size={25} />
           </span>
@@ -480,7 +575,7 @@ function App() {
             safari<span>planner</span>
             <small>YOUR JOURNEY, CURATED</small>
           </span>
-        </a>
+        </Link>
 
         <button
           className="mobile-toggle"
@@ -492,22 +587,131 @@ function App() {
         </button>
 
         <nav className={`main-nav ${mobileOpen ? 'main-nav--open' : ''}`}>
-          <a href="#destinations" onClick={() => setMobileOpen(false)}>
-            Discover
-          </a>
-          <a href="#plan-trip" onClick={() => setMobileOpen(false)}>
-            Plan a trip
-          </a>
-          <a href="#why-us" onClick={() => setMobileOpen(false)}>
-            Our approach
-          </a>
-          <button className="nav-cta" onClick={scrollToPlanner}>
+          <Link to="/" onClick={() => setMobileOpen(false)}>Home</Link>
+          <Link to="/explore" onClick={() => setMobileOpen(false)}>Explore</Link>
+          <Link to="/plan-trip" onClick={() => setMobileOpen(false)}>Plan a trip</Link>
+          <Link to="/my-trips" onClick={() => setMobileOpen(false)}>My trips</Link>
+          <Link className="nav-cta" to="/plan-trip" onClick={() => setMobileOpen(false)}>
             Start planning <Icon name="arrow" size={16} />
-          </button>
+          </Link>
         </nav>
       </header>
 
-      <main>
+      <main className={`app-main ${
+        isHomePage ? "app-main--home" :
+        isExplorePage ? "app-main--explore" :
+        isPlannerPage ? "app-main--planner" :
+        isMyTripsPage ? "app-main--my-trips" :
+        isDestinationPage ? "app-main--destination" : "app-main--not-found"
+      }`}>
+        {isDestinationPage && (
+          <section className="destination-detail section-shell">
+            <Link className="text-link destination-detail__back" to="/explore">
+              <Icon name="arrowLeft" size={17} /> Back to destinations
+            </Link>
+
+            {currentDestination ? (
+              <>
+                <div className="destination-detail__hero">
+                  <img
+                    src={currentDestination.image_url || heroImage}
+                    alt={currentDestination.name}
+                    onError={(event) => {
+                      event.currentTarget.onerror = null;
+                      event.currentTarget.src = heroImage;
+                    }}
+                  />
+                  <div className="destination-detail__hero-overlay" />
+                  <div className="destination-detail__hero-caption">
+                    <span>DISCOVER KENYA</span>
+                    <p>{currentDestination.category || "A PLACE TO DISCOVER"}</p>
+                  </div>
+                </div>
+
+                <div className="destination-detail__layout">
+                  <div className="destination-detail__content">
+                    <span className="eyebrow">
+                      <span className="eyebrow__line" />
+                      YOUR NEXT DESTINATION
+                    </span>
+
+                    <h1>{currentDestination.name}</h1>
+
+                    <p className="destination-detail__location">
+                      <Icon name="pin" size={16} />
+                      {[currentDestination.region, currentDestination.country]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </p>
+
+                    <p className="destination-detail__description">
+                      {currentDestination.description ||
+                        `Discover ${currentDestination.name} and make it part of a journey designed around your interests.`}
+                    </p>
+
+                    <button
+                      className="button button--dark"
+                      onClick={() => {
+                        setTrip((previous) => ({
+                          ...previous,
+                          destination: currentDestination.name,
+                        }));
+                        navigate("/plan-trip");
+                      }}
+                    >
+                      Plan a trip here <Icon name="arrow" size={17} />
+                    </button>
+                  </div>
+
+                  <aside className="destination-detail__aside">
+                    <span className="eyebrow">
+                      <span className="eyebrow__line" />
+                      AT A GLANCE
+                    </span>
+
+                    <div className="destination-detail__fact">
+                      <span>DESTINATION</span>
+                      <strong>{currentDestination.name}</strong>
+                    </div>
+
+                    <div className="destination-detail__fact">
+                      <span>REGION</span>
+                      <strong>{currentDestination.region || "Kenya"}</strong>
+                    </div>
+
+                    <div className="destination-detail__fact">
+                      <span>COUNTRY</span>
+                      <strong>{currentDestination.country || "Kenya"}</strong>
+                    </div>
+
+                    <div className="destination-detail__fact">
+                      <span>EXPERIENCE</span>
+                      <strong>{currentDestination.category || "Travel & discovery"}</strong>
+                    </div>
+
+                    <p className="destination-detail__aside-note">
+                      Every journey is different. Build an itinerary around
+                      your dates, budget and preferred travel style.
+                    </p>
+                  </aside>
+                </div>
+              </>
+            ) : destinationsLoading ? (
+              <div className="destination-detail__content">
+                <p className="destination-status">Loading destination...</p>
+              </div>
+            ) : (
+              <div className="destination-detail__content">
+                <h1>Destination not found</h1>
+                <p>This destination may no longer be available.</p>
+                <Link className="text-link" to="/explore">
+                  Explore destinations
+                </Link>
+              </div>
+            )}
+          </section>
+        )}
+
         <section className="hero" id="home">
           <img
             className="hero__image"
@@ -586,6 +790,72 @@ function App() {
             </p>
           </div>
 
+          {isExplorePage && (
+            <div className="explore-tools">
+              <div className="explore-tools__search">
+                <Icon name="search" size={19} />
+                <input
+                  type="search"
+                  placeholder="Search destinations, regions or countries..."
+                  value={destinationSearch}
+                  onChange={(event) => setDestinationSearch(event.target.value)}
+                  aria-label="Search destinations"
+                />
+                {destinationSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setDestinationSearch('')}
+                    aria-label="Clear search"
+                  >
+                    <Icon name="close" size={17} />
+                  </button>
+                )}
+              </div>
+
+              <div className="explore-tools__filters">
+                <span className="explore-tools__label">EXPLORE BY</span>
+
+                <button
+                  type="button"
+                  className={`explore-filter ${selectedCategory === 'All' ? 'is-active' : ''}`}
+                  onClick={() => setSelectedCategory('All')}
+                >
+                  All places
+                </button>
+
+                {destinationCategories.map((category) => (
+                  <button
+                    type="button"
+                    key={category}
+                    className={`explore-filter ${selectedCategory === category ? 'is-active' : ''}`}
+                    onClick={() => setSelectedCategory(category)}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+
+              <div className="explore-tools__results">
+                <span>
+                  {filteredDestinations.length} destination
+                  {filteredDestinations.length === 1 ? '' : 's'} found
+                </span>
+
+                {(destinationSearch || selectedCategory !== 'All') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDestinationSearch('');
+                      setSelectedCategory('All');
+                    }}
+                  >
+                    Clear filters
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           {destinationsLoading && (
             <p className="destination-status" role="status">
               Discovering destinations...
@@ -606,13 +876,23 @@ function App() {
               </p>
             )}
 
+          {isExplorePage &&
+            !destinationsLoading &&
+            !destinationsError &&
+            destinations.length > 0 &&
+            filteredDestinations.length === 0 && (
+              <p className="destination-status">
+                No destinations match your search. Try another name or category.
+              </p>
+            )}
+
           <div className="destination-grid">
-            {destinations.map((destination, index) => (
+            {(isExplorePage ? filteredDestinations : destinations).map((destination, index) => (
               <article className="destination-card" key={destination.name}>
                 <button
                   className="destination-card__image-button"
-                  onClick={scrollToPlanner}
-                  aria-label={`Plan a trip to ${destination.name}`}
+                  onClick={() => navigate(`/destinations/${destination.id}`)}
+                  aria-label={`View ${destination.name} details`}
                 >
                   <img
                     src={destination.image_url || heroImage}
@@ -934,6 +1214,78 @@ function App() {
             </p>
           </div>
 
+          {!savedItinerariesLoading && savedItineraries.length > 0 && (
+            <div className="my-trips-dashboard">
+              <div className="my-trips-dashboard__welcome">
+                <div>
+                  <span className="eyebrow">
+                    <span className="eyebrow__line" />
+                    YOUR TRAVEL OVERVIEW
+                  </span>
+                  <h3>Your journeys, <em>at a glance.</em></h3>
+                </div>
+                <Link className="button button--dark" to="/plan-trip">
+                  Plan another trip <Icon name="arrow" size={16} />
+                </Link>
+              </div>
+
+              <div className="my-trips-stats">
+                <article className="my-trips-stat my-trips-stat--total">
+                  <span>TOTAL JOURNEYS</span>
+                  <strong>{savedItineraries.length}</strong>
+                  <small>Saved in your collection</small>
+                </article>
+                <article className="my-trips-stat">
+                  <span>UPCOMING</span>
+                  <strong>{upcomingTrips}</strong>
+                  <small>Journeys ahead</small>
+                </article>
+                <article className="my-trips-stat">
+                  <span>IN PROGRESS</span>
+                  <strong>{ongoingTrips}</strong>
+                  <small>Happening now</small>
+                </article>
+                <article className="my-trips-stat">
+                  <span>COMPLETED</span>
+                  <strong>{pastTrips}</strong>
+                  <small>Memories made</small>
+                </article>
+              </div>
+
+              <div className="my-trips-toolbar">
+                <div className="my-trips-toolbar__search">
+                  <Icon name="search" size={18} />
+                  <input
+                    type="search"
+                    placeholder="Search your journeys..."
+                    value={tripSearch}
+                    onChange={(event) => setTripSearch(event.target.value)}
+                    aria-label="Search saved trips"
+                  />
+                </div>
+
+                <div className="my-trips-toolbar__filters" aria-label="Filter trips">
+                  {[
+                    ["all", "All trips"],
+                    ["upcoming", "Upcoming"],
+                    ["ongoing", "In progress"],
+                    ["past", "Completed"],
+                    ["pending", "Dates pending"],
+                  ].map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className={tripFilter === value ? "is-active" : ""}
+                      onClick={() => setTripFilter(value)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           {selectedItineraryLoading && (
             <p className="saved-trips__message" role="status">
               Opening your saved itinerary...
@@ -1206,14 +1558,37 @@ function App() {
                 Plan your first trip <Icon name="arrow" size={17} />
               </button>
             </div>
-          ) : (
+          ) : filteredSavedItineraries.length === 0 ? (
+              <div className="saved-trips__empty">
+                <h3>No journeys found.</h3>
+                <p>Try another search or choose a different trip filter.</p>
+                <button
+                  className="button button--dark"
+                  type="button"
+                  onClick={() => {
+                    setTripSearch("");
+                    setTripFilter("all");
+                  }}
+                >
+                  Clear filters
+                </button>
+              </div>
+            ) : (
             <div className="saved-trips__grid">
-              {savedItineraries.map((itinerary) => (
+              {filteredSavedItineraries.map((itinerary) => (
                 <article
                   className="saved-trip-card"
                   key={itinerary.itinerary_id}
                 >
                   <div className="saved-trip-card__top">
+                    <span className={`saved-trip-card__status saved-trip-card__status--${getTripStatus(itinerary)}`}>
+                      {{
+                        upcoming: "Upcoming",
+                        ongoing: "In progress",
+                        past: "Completed",
+                        pending: "Dates pending",
+                      }[getTripStatus(itinerary)]}
+                    </span>
                     <span>
                       {itinerary.destination_details?.region ||
                         itinerary.destination_details?.country ||
@@ -1284,7 +1659,7 @@ function App() {
       </main>
 
       <footer className="site-footer">
-        <a className="brand brand--footer" href="#home">
+        <Link className="brand brand--footer" to="/">
           <span className="brand__mark">
             <Icon name="compass" size={24} />
           </span>
@@ -1292,7 +1667,7 @@ function App() {
             safari<span>planner</span>
             <small>YOUR JOURNEY, CURATED</small>
           </span>
-        </a>
+        </Link>
 
         <p>Thoughtful journeys. Lasting stories.</p>
         <span className="site-footer__copyright">

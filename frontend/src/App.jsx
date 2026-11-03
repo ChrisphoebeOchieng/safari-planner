@@ -128,6 +128,18 @@ function App() {
   const [deletingItineraryId, setDeletingItineraryId] = useState(null);
   const [deleteItineraryError, setDeleteItineraryError] = useState("");
 
+  const [isEditingTrip, setIsEditingTrip] = useState(false);
+  const [isUpdatingTrip, setIsUpdatingTrip] = useState(false);
+  const [editTripError, setEditTripError] = useState("");
+  const [editTripSuccess, setEditTripSuccess] = useState("");
+  const [editTrip, setEditTrip] = useState({
+    destination: "",
+    startDate: "",
+    endDate: "",
+    travelStyle: "Wildlife & Safari",
+    budget: "",
+  });
+
   useEffect(() => {
     let cancelled = false;
 
@@ -238,6 +250,125 @@ function App() {
       );
     } finally {
       setDeletingItineraryId(null);
+    }
+  }
+
+  function beginEditingTrip() {
+    const plan = selectedItinerary?.plan;
+
+    if (!plan) return;
+
+    setEditTrip({
+      destination: plan.destination || "",
+      startDate: plan.start_date || "",
+      endDate: plan.end_date || "",
+      travelStyle: plan.travel_style || "Wildlife & Safari",
+      budget: plan.budget_kes == null ? "" : String(plan.budget_kes),
+    });
+
+    setEditTripError("");
+    setEditTripSuccess("");
+    setIsEditingTrip(true);
+  }
+
+  function updateEditTrip(event) {
+    const { name, value } = event.target;
+
+    setEditTrip((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+
+    setEditTripError("");
+    setEditTripSuccess("");
+  }
+
+  async function submitEditTrip(event) {
+    event.preventDefault();
+
+    if (!selectedItinerary?.trip_preference_id) {
+      setEditTripError(
+        "The original trip preferences could not be identified."
+      );
+      return;
+    }
+
+    if (editTrip.endDate < editTrip.startDate) {
+      setEditTripError("The end date cannot be before the start date.");
+      return;
+    }
+
+    setIsUpdatingTrip(true);
+    setEditTripError("");
+    setEditTripSuccess("");
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/trip-preferences/${selectedItinerary.trip_preference_id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            destination: editTrip.destination.trim(),
+            start_date: editTrip.startDate,
+            end_date: editTrip.endDate,
+            travel_style: editTrip.travelStyle,
+            budget:
+              editTrip.budget.trim() === ""
+                ? null
+                : Number(editTrip.budget),
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Unable to update this trip.");
+      }
+
+      // Retrieve the regenerated itinerary.
+      const detailResponse = await fetch(
+        `${API_BASE_URL}/itineraries/${selectedItinerary.itinerary_id}`
+      );
+      const detailResult = await detailResponse.json();
+
+      if (!detailResponse.ok) {
+        throw new Error(
+          detailResult.error || "Trip updated, but the itinerary could not be refreshed."
+        );
+      }
+
+      setSelectedItinerary(detailResult);
+      setIsEditingTrip(false);
+      setEditTripSuccess("Your trip and itinerary have been updated.");
+
+      // Refresh the saved-trip cards without undoing a successful update
+      // if the list request temporarily fails.
+      try {
+        const listResponse = await fetch(`${API_BASE_URL}/itineraries`);
+        const listResult = await listResponse.json();
+
+        if (listResponse.ok) {
+          setSavedItineraries(
+            Array.isArray(listResult.itineraries)
+              ? listResult.itineraries
+              : []
+          );
+        }
+      } catch {
+        // The refreshed detail remains available even if this request fails.
+      }
+    } catch (err) {
+      setEditTripError(
+        err.message === "Failed to fetch"
+          ? "Could not reach Safari Planner. Check that the Flask server is running."
+          : err.message || "Unable to update this trip."
+      );
+    } finally {
+      setIsUpdatingTrip(false);
     }
   }
 
@@ -826,6 +957,9 @@ function App() {
                 onClick={() => {
                   setSelectedItinerary(null);
                   setSelectedItineraryError("");
+                  setIsEditingTrip(false);
+                  setEditTripError("");
+                  setEditTripSuccess("");
                 }}
               >
                 <Icon name="arrowLeft" size={16} />
@@ -849,6 +983,134 @@ function App() {
                   {selectedItinerary.plan.duration_days === 1 ? "day" : "days"}
                 </p>
               </div>
+
+              <div className="saved-itinerary-detail__actions">
+                {!isEditingTrip && (
+                  <button
+                    className="button button--dark"
+                    type="button"
+                    onClick={beginEditingTrip}
+                  >
+                    Edit trip
+                  </button>
+                )}
+              </div>
+
+              {editTripSuccess && (
+                <p className="saved-trip-edit__success" role="status">
+                  {editTripSuccess}
+                </p>
+              )}
+
+              {isEditingTrip && (
+                <form
+                  className="saved-trip-edit"
+                  onSubmit={submitEditTrip}
+                >
+                  <div className="saved-trip-edit__heading">
+                    <span className="eyebrow">
+                      <span className="eyebrow__line" />
+                      REFINE YOUR JOURNEY
+                    </span>
+                    <h4>Edit your trip</h4>
+                    <p>
+                      Update your preferences and we'll refresh your itinerary.
+                    </p>
+                  </div>
+
+                  <label>
+                    Destination
+                    <input
+                      name="destination"
+                      value={editTrip.destination}
+                      onChange={updateEditTrip}
+                      maxLength={150}
+                      required
+                    />
+                  </label>
+
+                  <div className="saved-trip-edit__dates">
+                    <label>
+                      Start date
+                      <input
+                        name="startDate"
+                        type="date"
+                        value={editTrip.startDate}
+                        onChange={updateEditTrip}
+                        required
+                      />
+                    </label>
+
+                    <label>
+                      End date
+                      <input
+                        name="endDate"
+                        type="date"
+                        min={editTrip.startDate || undefined}
+                        value={editTrip.endDate}
+                        onChange={updateEditTrip}
+                        required
+                      />
+                    </label>
+                  </div>
+
+                  <label>
+                    Travel style
+                    <select
+                      name="travelStyle"
+                      value={editTrip.travelStyle}
+                      onChange={updateEditTrip}
+                    >
+                      <option>Wildlife & Safari</option>
+                      <option>Nature & Adventure</option>
+                      <option>Coastal Escape</option>
+                      <option>Culture & Heritage</option>
+                      <option>Relaxation & Wellness</option>
+                    </select>
+                  </label>
+
+                  <label>
+                    Approximate budget (KES)
+                    <input
+                      name="budget"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={editTrip.budget}
+                      onChange={updateEditTrip}
+                      placeholder="e.g. 50000"
+                    />
+                  </label>
+
+                  {editTripError && (
+                    <p className="saved-trip-edit__error" role="alert">
+                      {editTripError}
+                    </p>
+                  )}
+
+                  <div className="saved-trip-edit__actions">
+                    <button
+                      className="button button--gold"
+                      type="submit"
+                      disabled={isUpdatingTrip}
+                    >
+                      {isUpdatingTrip ? "Saving changes..." : "Save changes"}
+                    </button>
+
+                    <button
+                      className="saved-trip-edit__cancel"
+                      type="button"
+                      disabled={isUpdatingTrip}
+                      onClick={() => {
+                        setIsEditingTrip(false);
+                        setEditTripError("");
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
 
               <div className="saved-itinerary-detail__summary">
                 <span>

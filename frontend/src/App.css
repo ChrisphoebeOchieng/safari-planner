@@ -1519,3 +1519,115 @@
   outline: 2px solid #8b6228;
   outline-offset: 3px;
 }
+
+
+/* Saved itinerary editing */
+.saved-itinerary-detail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 24px 0;
+}
+
+.saved-trip-edit {
+  display: grid;
+  gap: 20px;
+  max-width: 720px;
+  margin: 24px 0 34px;
+  padding: clamp(20px, 3vw, 30px);
+  border: 1px solid #ded6c7;
+  background: #fffdf8;
+}
+
+.saved-trip-edit__heading h4 {
+  margin: 14px 0 8px;
+  color: #303724;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.8rem;
+  font-weight: 400;
+}
+
+.saved-trip-edit__heading p {
+  color: #69695e;
+  line-height: 1.7;
+}
+
+.saved-trip-edit label {
+  display: grid;
+  gap: 9px;
+  color: #555747;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.saved-trip-edit input,
+.saved-trip-edit select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1px solid #ded6c7;
+  border-radius: 0;
+  background: #fffdf8;
+  color: #303724;
+  font: inherit;
+  font-size: 0.95rem;
+}
+
+.saved-trip-edit input:focus,
+.saved-trip-edit select:focus {
+  border-color: #8b6228;
+  outline: 2px solid #8b6228;
+  outline-offset: 2px;
+}
+
+.saved-trip-edit__dates {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.saved-trip-edit__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+.saved-trip-edit__cancel {
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid #ded6c7;
+  background: transparent;
+  color: #555747;
+  font: inherit;
+  cursor: pointer;
+}
+
+.saved-trip-edit__cancel:hover:not(:disabled) {
+  border-color: #8b6228;
+  color: #8b6228;
+}
+
+.saved-trip-edit__cancel:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.saved-trip-edit__error {
+  margin: 0;
+  color: #a04438;
+  line-height: 1.6;
+}
+
+.saved-trip-edit__success {
+  margin: 0 0 20px;
+  color: #52613f;
+  line-height: 1.6;
+}
+
+@media (max-width: 520px) {
+  .saved-trip-edit__dates {
+    grid-template-columns: 1fr;
+  }
+}

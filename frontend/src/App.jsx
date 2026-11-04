@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import AuthPage from './AuthPage';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import heroImage from './assets/hero.png';
 import './App.css';
@@ -59,6 +60,22 @@ function Icon({ name, size = 20 }) {
 
 function App() {
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const [authToken, setAuthToken] = useState(
+    () => sessionStorage.getItem('safari_planner_token') || ''
+  );
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authChecking, setAuthChecking] = useState(
+    () => Boolean(sessionStorage.getItem('safari_planner_token'))
+  );
+  const [authMode, setAuthMode] = useState('login');
+  const [authForm, setAuthForm] = useState({
+    full_name: '',
+    email: '',
+    password: '',
+  });
+  const [authSubmitting, setAuthSubmitting] = useState(false);
+  const [authError, setAuthError] = useState('');
 
   // ADDED: Destination data and API loading states.
   const [destinations, setDestinations] = useState([]);
@@ -176,13 +193,29 @@ function App() {
     let cancelled = false;
 
     async function loadSavedItineraries() {
+      if (authChecking) return;
+
+      if (!authToken || !currentUser) {
+        setSavedItineraries([]);
+        setSavedItinerariesError('');
+        setSavedItinerariesLoading(false);
+        return;
+      }
+
+      setSavedItinerariesLoading(true);
+      setSavedItinerariesError('');
+
       try {
-        const response = await fetch(`${API_BASE_URL}/itineraries`);
+        const response = await fetch(`${API_BASE_URL}/itineraries`, {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+        });
         const result = await response.json();
 
         if (!response.ok) {
           throw new Error(
-            result.error || "Unable to load saved itineraries."
+            result.error || 'Unable to load saved itineraries.'
           );
         }
 
@@ -194,9 +227,9 @@ function App() {
       } catch (err) {
         if (!cancelled) {
           setSavedItinerariesError(
-            err.message === "Failed to fetch"
-              ? "Saved trips are temporarily unavailable. Please try again later."
-              : err.message || "Unable to load saved itineraries."
+            err.message === 'Failed to fetch'
+              ? 'Saved trips are temporarily unavailable. Please try again later.'
+              : err.message || 'Unable to load saved itineraries.'
           );
         }
       } finally {
@@ -211,7 +244,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [authToken, currentUser, authChecking]);
 
   function openSavedItinerary(itineraryId) {
     navigate(`/my-trips/${itineraryId}`);
@@ -232,7 +265,7 @@ function App() {
     try {
       const response = await fetch(
         `${API_BASE_URL}/itineraries/${itineraryId}`,
-        { method: "DELETE" }
+        { method: "DELETE", headers: getAuthHeaders() }
       );
       const result = await response.json();
 
@@ -316,6 +349,7 @@ function App() {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
+            ...getAuthHeaders(),
           },
           body: JSON.stringify({
             destination: editTrip.destination.trim(),
@@ -338,7 +372,8 @@ function App() {
 
       // Retrieve the regenerated itinerary.
       const detailResponse = await fetch(
-        `${API_BASE_URL}/itineraries/${selectedItinerary.itinerary_id}`
+        `${API_BASE_URL}/itineraries/${selectedItinerary.itinerary_id}`,
+        { headers: getAuthHeaders() }
       );
       const detailResult = await detailResponse.json();
 
@@ -355,7 +390,9 @@ function App() {
       // Refresh the saved-trip cards without undoing a successful update
       // if the list request temporarily fails.
       try {
-        const listResponse = await fetch(`${API_BASE_URL}/itineraries`);
+        const listResponse = await fetch(`${API_BASE_URL}/itineraries`, {
+          headers: getAuthHeaders(),
+        });
         const listResult = await listResponse.json();
 
         if (listResponse.ok) {
@@ -423,6 +460,7 @@ function App() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...getAuthHeaders(),
         },
         body: JSON.stringify({
           destination: trip.destination.trim(),
@@ -447,7 +485,7 @@ function App() {
       // Generate and save an itinerary using the new preference ID.
       const itineraryResponse = await fetch(
         `${API_BASE_URL}/trip-preferences/${result.preference.id}/generate`,
-        { method: "POST" }
+        { method: "POST", headers: getAuthHeaders() }
       );
 
       const itineraryResult = await itineraryResponse.json();
@@ -481,10 +519,138 @@ function App() {
   const navigate = useNavigate();
   const destinationId = pathname.split("/")[2];
 
+  function getAuthHeaders() {
+    return authToken
+      ? { Authorization: `Bearer ${authToken}` }
+      : {};
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function validateSession() {
+      if (!authToken) {
+        setCurrentUser(null);
+        setAuthChecking(false);
+        return;
+      }
+
+      setAuthChecking(true);
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/auth/me`, {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+        });
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Your session has expired.');
+        }
+
+        if (!cancelled) {
+          setCurrentUser(result.user);
+        }
+      } catch {
+        if (!cancelled) {
+          sessionStorage.removeItem('safari_planner_token');
+          setAuthToken('');
+          setCurrentUser(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setAuthChecking(false);
+        }
+      }
+    }
+
+    validateSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authToken]);
+
+  useEffect(() => {
+    if (pathname === '/register') {
+      setAuthMode('register');
+    } else if (pathname === '/login') {
+      setAuthMode('login');
+    }
+  }, [pathname]);
+
+  async function submitAuthentication(event) {
+    event.preventDefault();
+    setAuthSubmitting(true);
+    setAuthError('');
+
+    const endpoint = authMode === 'register' ? 'register' : 'login';
+
+    try {
+      const payload = authMode === 'register'
+        ? authForm
+        : { email: authForm.email, password: authForm.password };
+
+      const response = await fetch(`${API_BASE_URL}/auth/${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Authentication failed. Please try again.');
+      }
+
+      sessionStorage.setItem('safari_planner_token', result.access_token);
+      setAuthToken(result.access_token);
+      setCurrentUser(result.user);
+      setAuthForm({ full_name: '', email: '', password: '' });
+      navigate('/my-trips');
+    } catch (err) {
+      setAuthError(
+        err.message === 'Failed to fetch'
+          ? 'Could not connect to Safari Planner. Check that the Flask server is running.'
+          : err.message || 'Authentication failed. Please try again.'
+      );
+    } finally {
+      setAuthSubmitting(false);
+    }
+  }
+
+  async function logout() {
+    const token = authToken;
+
+    try {
+      if (token) {
+        await fetch(`${API_BASE_URL}/auth/logout`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      }
+    } finally {
+      sessionStorage.removeItem('safari_planner_token');
+      setAuthToken('');
+      setCurrentUser(null);
+      setSavedItineraries([]);
+      setSelectedItinerary(null);
+      setSelectedItineraryError('');
+      setSavedItinerariesError('');
+      navigate('/');
+    }
+  }
+
   const isHomePage = pathname === "/";
   const isExplorePage = pathname === "/explore";
   const isPlannerPage = pathname === "/plan-trip";
-  const isMyTripsPage = pathname === "/my-trips";
+  const isMyTripsPage =
+    pathname === "/my-trips" || pathname.startsWith("/my-trips/");
+  const isItineraryDetailPage =
+    /^\/my-trips\/\d+$/.test(pathname);
+  const isAuthPage =
+    pathname === "/login" || pathname === "/register";
   const isDestinationPage = pathname.startsWith("/destinations/");
 
   const currentDestination = destinations.find(
@@ -566,6 +732,27 @@ function App() {
           <Link to="/explore" onClick={() => setMobileOpen(false)}>Explore</Link>
           <Link to="/plan-trip" onClick={() => setMobileOpen(false)}>Plan a trip</Link>
           <Link to="/my-trips" onClick={() => setMobileOpen(false)}>My trips</Link>
+          {currentUser ? (
+            <>
+              <span className="nav-user">
+                Traveler
+              </span>
+              <button
+                className="nav-auth-button"
+                type="button"
+                onClick={() => {
+                  setMobileOpen(false);
+                  logout();
+                }}
+              >
+                Sign out
+              </button>
+            </>
+          ) : (
+            <Link to="/login" onClick={() => setMobileOpen(false)}>
+              Sign in
+            </Link>
+          )}
           <Link className="nav-cta" to="/plan-trip" onClick={() => setMobileOpen(false)}>
             Start planning <Icon name="arrow" size={16} />
           </Link>
@@ -579,6 +766,28 @@ function App() {
         isMyTripsPage ? "app-main--my-trips" :
         isDestinationPage ? "app-main--destination" : "app-main--not-found"
       }`}>
+        {isAuthPage ? (
+          authChecking ? (
+            <section className="auth-page section-shell">
+              <p role="status">Checking your session...</p>
+            </section>
+          ) : (
+            <AuthPage
+              mode={authMode}
+              setMode={(mode) => {
+                setAuthMode(mode);
+                setAuthError('');
+                navigate(mode === 'register' ? '/register' : '/login');
+              }}
+              form={authForm}
+              setForm={setAuthForm}
+              onSubmit={submitAuthentication}
+              loading={authSubmitting}
+              error={authError}
+            />
+          )
+        ) : (
+          <>
         {isDestinationPage && (
           <section className="destination-detail section-shell">
             <Link className="text-link destination-detail__back" to="/explore">
@@ -1631,6 +1840,8 @@ function App() {
             </div>
           )}
         </section>
+          </>
+        )}
       </main>
 
       <footer className="site-footer">

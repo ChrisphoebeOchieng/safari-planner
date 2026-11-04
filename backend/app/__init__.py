@@ -5,6 +5,7 @@ from flask import Flask
 from . import models
 from .config import Config
 from .extensions import cors, db, jwt, migrate
+from .routes.auth import auth_bp
 from .routes.destinations import destinations_bp
 from .routes.health import health_bp
 from .routes.itineraries import itineraries_bp
@@ -20,6 +21,15 @@ def create_app(config_class=Config):
     migrate.init_app(app, db)
     jwt.init_app(app)
 
+    @jwt.token_in_blocklist_loader
+    def is_token_revoked(jwt_header, jwt_payload):
+        from .models import TokenBlocklist
+
+        return (
+            db.session.get(TokenBlocklist, jwt_payload["jti"])
+            is not None
+        )
+
     cors.init_app(
         app,
         resources={
@@ -30,6 +40,7 @@ def create_app(config_class=Config):
     )
 
     app.register_blueprint(health_bp, url_prefix="/api")
+    app.register_blueprint(auth_bp, url_prefix="/api")
     app.register_blueprint(trip_preferences_bp, url_prefix="/api")
     app.register_blueprint(destinations_bp, url_prefix="/api")
     app.register_blueprint(itineraries_bp, url_prefix="/api")

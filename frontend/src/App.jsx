@@ -679,6 +679,76 @@ function App() {
     pathname === "/login" || pathname === "/register";
   const isDestinationPage = pathname.startsWith("/destinations/");
 
+  // Load a saved itinerary when its detail URL is opened directly.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSelectedItinerary() {
+      if (!isItineraryDetailPage) {
+        setSelectedItinerary(null);
+        setSelectedItineraryError("");
+        setSelectedItineraryLoading(false);
+        return;
+      }
+
+      if (authChecking) return;
+
+      if (!authToken || !currentUser) {
+        setSelectedItinerary(null);
+        setSelectedItineraryError("Please sign in to view this saved itinerary.");
+        setSelectedItineraryLoading(false);
+        return;
+      }
+
+      setSelectedItinerary(null);
+      setSelectedItineraryError("");
+      setSelectedItineraryLoading(true);
+
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/itineraries/${destinationId}`,
+          { headers: getAuthHeaders() }
+        );
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            result.error || "Unable to load this saved itinerary."
+          );
+        }
+
+        if (!cancelled) {
+          setSelectedItinerary(result);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setSelectedItineraryError(
+            err.message === "Failed to fetch"
+              ? "Could not reach Safari Planner. Check that the Flask server is running."
+              : err.message || "Unable to load this saved itinerary."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setSelectedItineraryLoading(false);
+        }
+      }
+    }
+
+    loadSelectedItinerary();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    pathname,
+    isItineraryDetailPage,
+    destinationId,
+    authToken,
+    currentUser,
+    authChecking,
+  ]);
+
   const currentDestination = destinations.find(
     (destination) => String(destination.id) === String(destinationId)
   );

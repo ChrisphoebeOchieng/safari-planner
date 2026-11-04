@@ -213,33 +213,8 @@ function App() {
     };
   }, []);
 
-  async function openSavedItinerary(itineraryId) {
-    setSelectedItineraryLoading(true);
-    setSelectedItineraryError("");
-    setSelectedItinerary(null);
-
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/itineraries/${itineraryId}`
-      );
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          result.error || "Unable to open this saved itinerary."
-        );
-      }
-
-      setSelectedItinerary(result);
-    } catch (err) {
-      setSelectedItineraryError(
-        err.message === "Failed to fetch"
-          ? "The itinerary service is unavailable. Please try again."
-          : err.message || "Unable to open this saved itinerary."
-      );
-    } finally {
-      setSelectedItineraryLoading(false);
-    }
+  function openSavedItinerary(itineraryId) {
+    navigate(`/my-trips/${itineraryId}`);
   }
 
   async function deleteSavedItinerary(itineraryId) {

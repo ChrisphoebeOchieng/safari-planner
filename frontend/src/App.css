@@ -2177,3 +2177,16 @@
     font-size: 10px;
   }
 }
+
+/* Dedicated saved itinerary page */
+.app-main--itinerary-detail .saved-trips__heading,
+.app-main--itinerary-detail .my-trips-dashboard,
+.app-main--itinerary-detail .saved-trips__grid,
+.app-main--itinerary-detail .saved-trips__empty {
+  display: none;
+}
+
+.app-main--itinerary-detail .saved-trips {
+  min-height: 65vh;
+}
+

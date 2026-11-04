@@ -170,6 +170,9 @@ function App() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
   const [savedPreference, setSavedPreference] = useState(null);
+  const [guestAccessToken, setGuestAccessToken] = useState(
+    () => sessionStorage.getItem("safari_planner_guest_access_token") || ""
+  );
   const [generatedItinerary, setGeneratedItinerary] = useState(null);
   const [selectedItinerary, setSelectedItinerary] = useState(null);
   const [selectedItineraryLoading, setSelectedItineraryLoading] = useState(false);
@@ -350,6 +353,9 @@ function App() {
           headers: {
             "Content-Type": "application/json",
             ...getAuthHeaders(),
+            ...(guestAccessToken
+              ? { "X-Guest-Access-Token": guestAccessToken }
+              : {}),
           },
           body: JSON.stringify({
             destination: editTrip.destination.trim(),
@@ -452,6 +458,8 @@ function App() {
     setError("");
     setSavedPreference(null);
     setGeneratedItinerary(null);
+    setGuestAccessToken("");
+    sessionStorage.removeItem("safari_planner_guest_access_token");
 
     let preferencesSaved = false;
 
@@ -482,10 +490,28 @@ function App() {
       preferencesSaved = true;
       setSavedPreference(result.preference);
 
-      // Generate and save an itinerary using the new preference ID.
+      const newGuestAccessToken = result.guest_access_token || "";
+      setGuestAccessToken(newGuestAccessToken);
+
+      if (newGuestAccessToken) {
+        sessionStorage.setItem(
+          "safari_planner_guest_access_token",
+          newGuestAccessToken
+        );
+      }
+
+      // Generate the itinerary using the guest token or user JWT.
       const itineraryResponse = await fetch(
         `${API_BASE_URL}/trip-preferences/${result.preference.id}/generate`,
-        { method: "POST", headers: getAuthHeaders() }
+        {
+          method: "POST",
+          headers: {
+            ...getAuthHeaders(),
+            ...(newGuestAccessToken
+              ? { "X-Guest-Access-Token": newGuestAccessToken }
+              : {}),
+          },
+        }
       );
 
       const itineraryResult = await itineraryResponse.json();

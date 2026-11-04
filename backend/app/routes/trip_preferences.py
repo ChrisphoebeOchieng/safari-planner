@@ -4,12 +4,17 @@ from datetime import date
 from decimal import Decimal, InvalidOperation
 
 from flask import Blueprint, current_app, jsonify, request
+from flask_jwt_extended import get_jwt_identity, jwt_required
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..extensions import db
 from ..models import Destination, GeneratedItinerary, TripPreference
 from ..services.itinerary_service import build_plan
+from ..services.guest_access import (
+    generate_guest_access_token,
+    verify_guest_access_token,
+)
 
 trip_preferences_bp = Blueprint("trip_preferences", __name__)
 
@@ -94,15 +99,51 @@ def serialize_preference(preference):
     }
 
 
+def preference_belongs_to_another_user(preference):
+    """Check whether a preference is owned by someone else."""
+    if preference.user_id is None:
+        return False
+
+    identity = get_jwt_identity()
+
+    if identity is None:
+        return True
+
+    try:
+        return preference.user_id != int(identity)
+    except (TypeError, ValueError):
+        return True
+
+
 @trip_preferences_bp.post("/trip-preferences")
+@jwt_required(optional=True)
 def create_trip_preference():
-    """Validate and save a visitor's trip preferences."""
+    """Validate and save trip preferences for a visitor or user."""
     data, error = validate_trip_data(request.get_json(silent=True))
 
     if error:
         return jsonify({"error": error}), 400
 
-    preference = TripPreference(**data)
+    identity = get_jwt_identity()
+
+    try:
+        user_id = int(identity) if identity is not None else None
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid authenticated user."}), 401
+
+    guest_access_token = None
+    guest_access_token_hash = None
+
+    if user_id is None:
+        guest_access_token, guest_access_token_hash = (
+            generate_guest_access_token()
+        )
+
+    preference = TripPreference(
+        **data,
+        user_id=user_id,
+        guest_access_token_hash=guest_access_token_hash,
+    )
 
     try:
         db.session.add(preference)
@@ -119,18 +160,28 @@ def create_trip_preference():
     return jsonify({
         "message": "Trip preferences saved successfully.",
         "preference": serialize_preference(preference),
+        **(
+            {"guest_access_token": guest_access_token}
+            if guest_access_token
+            else {}
+        ),
     }), 201
 
 
 @trip_preferences_bp.put("/trip-preferences/<int:preference_id>")
+@jwt_required(optional=True)
 def update_trip_preference(preference_id):
     """Update preferences and regenerate the associated itinerary."""
     preference = db.session.get(TripPreference, preference_id)
 
-    if preference is None:
-        return jsonify({
-            "error": "Trip preferences not found."
-        }), 404
+    if preference is None or preference_belongs_to_another_user(preference):
+        return jsonify({"error": "Trip preferences not found."}), 404
+
+    if preference.user_id is None and not verify_guest_access_token(
+        preference,
+        request.headers.get("X-Guest-Access-Token"),
+    ):
+        return jsonify({"error": "Trip preferences not found."}), 404
 
     data, error = validate_trip_data(
         request.get_json(silent=True),

@@ -1,22 +1,64 @@
 """Itinerary generation and retrieval endpoints."""
 
-
-from flask import Blueprint, current_app, jsonify
+from flask import Blueprint, current_app, jsonify, request
+from flask_jwt_extended import get_jwt_identity, jwt_required
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..extensions import db
 from ..models import Destination, GeneratedItinerary, TripPreference
 from ..services.itinerary_service import build_plan
+from ..services.guest_access import verify_guest_access_token
 
 itineraries_bp = Blueprint("itineraries", __name__)
 
+
+def get_authenticated_user_id():
+    """Return the authenticated user's database ID."""
+    try:
+        return int(get_jwt_identity())
+    except (TypeError, ValueError):
+        return None
+
+
+def get_owned_itinerary(itinerary_id, user_id):
+    """Retrieve an itinerary only when its preference belongs to the user."""
+    return db.session.scalar(
+        select(GeneratedItinerary)
+        .join(
+            TripPreference,
+            GeneratedItinerary.trip_preference_id == TripPreference.id,
+        )
+        .where(
+            GeneratedItinerary.id == itinerary_id,
+            TripPreference.user_id == user_id,
+        )
+    )
+
+
 @itineraries_bp.post("/trip-preferences/<int:preference_id>/generate")
+@jwt_required(optional=True)
 def generate_itinerary(preference_id):
     """Generate and save an itinerary for a submitted trip preference."""
     preference = db.session.get(TripPreference, preference_id)
 
     if preference is None:
+        return jsonify({"error": "Trip preferences not found."}), 404
+
+    identity = get_jwt_identity()
+
+    if preference.user_id is not None:
+        try:
+            user_id = int(identity) if identity is not None else None
+        except (TypeError, ValueError):
+            user_id = None
+
+        if user_id != preference.user_id:
+            return jsonify({"error": "Trip preferences not found."}), 404
+    elif not verify_guest_access_token(
+        preference,
+        request.headers.get("X-Guest-Access-Token"),
+    ):
         return jsonify({"error": "Trip preferences not found."}), 404
 
     day_count = (preference.end_date - preference.start_date).days + 1
@@ -70,9 +112,15 @@ def generate_itinerary(preference_id):
 
 
 @itineraries_bp.get("/itineraries/<int:itinerary_id>")
+@jwt_required()
 def get_itinerary(itinerary_id):
-    """Retrieve a previously saved generated itinerary."""
-    saved = db.session.get(GeneratedItinerary, itinerary_id)
+    """Retrieve a saved itinerary belonging to the authenticated user."""
+    user_id = get_authenticated_user_id()
+
+    if user_id is None:
+        return jsonify({"error": "Invalid authenticated user."}), 401
+
+    saved = get_owned_itinerary(itinerary_id, user_id)
 
     if saved is None:
         return jsonify({"error": "Itinerary not found."}), 404
@@ -88,11 +136,23 @@ def get_itinerary(itinerary_id):
 
 
 @itineraries_bp.get("/itineraries")
+@jwt_required()
 def list_itineraries():
-    """List saved itineraries for the dashboard."""
+    """List only saved itineraries belonging to the authenticated user."""
+    user_id = get_authenticated_user_id()
+
+    if user_id is None:
+        return jsonify({"error": "Invalid authenticated user."}), 401
+
     try:
         saved_itineraries = db.session.scalars(
-            select(GeneratedItinerary).order_by(
+            select(GeneratedItinerary)
+            .join(
+                TripPreference,
+                GeneratedItinerary.trip_preference_id == TripPreference.id,
+            )
+            .where(TripPreference.user_id == user_id)
+            .order_by(
                 GeneratedItinerary.created_at.desc(),
                 GeneratedItinerary.id.desc(),
             )
@@ -133,10 +193,17 @@ def list_itineraries():
             "error": "Unable to retrieve saved itineraries right now."
         }), 500
 
+
 @itineraries_bp.delete("/itineraries/<int:itinerary_id>")
+@jwt_required()
 def delete_itinerary(itinerary_id):
-    """Delete a saved generated itinerary."""
-    saved = db.session.get(GeneratedItinerary, itinerary_id)
+    """Delete a saved itinerary belonging to the authenticated user."""
+    user_id = get_authenticated_user_id()
+
+    if user_id is None:
+        return jsonify({"error": "Invalid authenticated user."}), 401
+
+    saved = get_owned_itinerary(itinerary_id, user_id)
 
     if saved is None:
         return jsonify({"error": "Itinerary not found."}), 404

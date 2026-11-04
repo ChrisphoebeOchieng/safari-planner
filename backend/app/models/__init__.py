@@ -64,6 +64,17 @@ class User(db.Model):
         return check_password_hash(self.password_hash, password)
 
 
+class TokenBlocklist(db.Model):
+    """Store revoked JWT identifiers to prevent token reuse."""
+
+    __tablename__ = "token_blocklist"
+
+    jti = db.Column(db.String(36), primary_key=True)
+    revoked_at = db.Column(
+        db.DateTime(timezone=True), default=utc_now, nullable=False
+    )
+
+
 class Destination(db.Model):
     """A destination available for travel planning."""
 
@@ -202,6 +213,16 @@ class TripPreference(db.Model):
     __tablename__ = "trip_preferences"
 
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    user = db.relationship("User")
+    guest_access_token_hash = db.Column(
+        db.String(64), nullable=True, unique=True, index=True
+    )
     destination = db.Column(db.String(150), nullable=False)
     start_date = db.Column(db.Date, nullable=False)
     end_date = db.Column(db.Date, nullable=False)

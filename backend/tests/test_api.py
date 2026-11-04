@@ -215,6 +215,82 @@ class SafariPlannerAPITests(unittest.TestCase):
         preference = db.session.get(TripPreference, preference_id)
 
         self.assertIsNone(preference.user_id)
+        self.assertTrue(response.get_json()["guest_access_token"])
+        self.assertEqual(
+            len(preference.guest_access_token_hash), 64
+        )
+        self.assertNotEqual(
+            preference.guest_access_token_hash,
+            response.get_json()["guest_access_token"],
+        )
+
+    def create_guest_trip(self):
+        preference_response = self.client.post(
+            "/api/trip-preferences",
+            json={
+                "destination": "Diani",
+                "start_date": "2030-06-01",
+                "end_date": "2030-06-03",
+                "travel_style": "Coastal Escape",
+                "budget": 30000,
+            },
+        )
+        self.assertEqual(preference_response.status_code, 201)
+        result = preference_response.get_json()
+        return result["preference"]["id"], result["guest_access_token"]
+
+    def test_guest_cannot_generate_without_access_token(self):
+        preference_id, token = self.create_guest_trip()
+        response = self.client.post(
+            f"/api/trip-preferences/{preference_id}/generate"
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_guest_can_generate_with_own_access_token(self):
+        preference_id, token = self.create_guest_trip()
+        response = self.client.post(
+            f"/api/trip-preferences/{preference_id}/generate",
+            headers={"X-Guest-Access-Token": token},
+        )
+        self.assertEqual(response.status_code, 201)
+
+    def test_guest_cannot_use_another_guests_token(self):
+        first_id, first_token = self.create_guest_trip()
+        second_id, second_token = self.create_guest_trip()
+        response = self.client.post(
+            f"/api/trip-preferences/{second_id}/generate",
+            headers={"X-Guest-Access-Token": first_token},
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_guest_cannot_update_without_access_token(self):
+        preference_id, token = self.create_guest_trip()
+        response = self.client.put(
+            f"/api/trip-preferences/{preference_id}",
+            json={
+                "destination": "Diani",
+                "start_date": "2030-06-01",
+                "end_date": "2030-06-04",
+                "travel_style": "Coastal Escape",
+                "budget": 35000,
+            },
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_guest_can_update_with_own_access_token(self):
+        preference_id, token = self.create_guest_trip()
+        response = self.client.put(
+            f"/api/trip-preferences/{preference_id}",
+            headers={"X-Guest-Access-Token": token},
+            json={
+                "destination": "Diani",
+                "start_date": "2030-06-01",
+                "end_date": "2030-06-04",
+                "travel_style": "Coastal Escape",
+                "budget": 35000,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
 
     def test_trip_preferences_reject_invalid_dates(self):
         response = self.client.post(

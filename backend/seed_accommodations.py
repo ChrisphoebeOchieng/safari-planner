@@ -26,6 +26,7 @@ ACCOMMODATIONS = [
         "description": "Resort accommodation near Lake Bogoria, with spa facilities and access to the Rift Valley landscape. Contact the property for current rates.",
         "rate": None,
         "website": "https://www.lakebogoria-hotel.com/",
+        "image": "https://www.lakebogoria-hotel.com/assets/images/accommodation/1759382798-slider6.jpg",
         "featured": True,
     },
     {
@@ -35,7 +36,9 @@ ACCOMMODATIONS = [
         "location": "Diani Beach, Kwale County",
         "description": "Beachfront boutique hotel with individually designed rooms and swimming pool facilities. Contact the property for current rates.",
         "rate": None,
-        "website": "https://www.themaji.com/",
+        "website": "https://www.the-maji.com/",
+        "image": "https://www.the-maji.com/wp-content/uploads/2025/11/The-Maji-HDR-52-scaled.jpg",
+        "image": None,
         "featured": True,
     },
     {
@@ -65,7 +68,8 @@ ACCOMMODATIONS = [
         "location": "Lamu Old Town, Lamu County",
         "description": "Restored Swahili houses in the heart of Lamu Old Town. Published room rates vary by room type.",
         "rate": 4152,
-        "website": "https://jannatlamu.reserveport.com/",
+        "website": "https://jannatlamu.com/",
+        "image": "https://jannatlamu.com/wp-content/uploads/2019/08/MA_IMG_2719-1024x683.jpg",
         "featured": True,
     },
     {
@@ -128,6 +132,8 @@ def seed_accommodations():
             accommodation.description = item["description"]
             accommodation.estimated_nightly_rate = item["rate"]
             accommodation.website_url = item["website"]
+            accommodation.image_url = item.get("image")
+            accommodation.image_url = item.get("image")
             accommodation.is_featured = item["featured"]
 
         db.session.commit()

@@ -9,6 +9,7 @@ from .routes.auth import auth_bp
 from .routes.destinations import destinations_bp
 from .routes.health import health_bp
 from .routes.itineraries import itineraries_bp
+from .routes.recommendations import recommendations_bp
 from .routes.trip_preferences import trip_preferences_bp
 
 
@@ -44,5 +45,6 @@ def create_app(config_class=Config):
     app.register_blueprint(trip_preferences_bp, url_prefix="/api")
     app.register_blueprint(destinations_bp, url_prefix="/api")
     app.register_blueprint(itineraries_bp, url_prefix="/api")
+    app.register_blueprint(recommendations_bp, url_prefix="/api")
 
     return app

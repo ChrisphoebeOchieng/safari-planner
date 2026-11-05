@@ -13,6 +13,7 @@ DESTINATIONS = [
         "category": "Wildlife & Safari",
         "description": "Explore Kenya's iconic savannah and wildlife experiences.",
         "image_url": "https://images.unsplash.com/photo-1516426122078-c23e76319801?auto=format&fit=crop&w=900&q=85",
+        "estimated_daily_cost": 15000,
         "is_featured": True,
     },
     {
@@ -21,6 +22,7 @@ DESTINATIONS = [
         "category": "Nature & Adventure",
         "description": "Discover Rift Valley scenery, geothermal features and birdlife.",
         "image_url": "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=85",
+        "estimated_daily_cost": 7000,
         "is_featured": True,
     },
     {
@@ -29,6 +31,7 @@ DESTINATIONS = [
         "category": "Coastal Escape",
         "description": "Enjoy a coastal getaway along Kenya's Indian Ocean shoreline.",
         "image_url": "https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?auto=format&fit=crop&w=900&q=85",
+        "estimated_daily_cost": 10000,
         "is_featured": True,
     },
     {
@@ -37,6 +40,7 @@ DESTINATIONS = [
         "category": "Wildlife & Safari",
         "description": "Experience open plains and views of Mount Kilimanjaro.",
         "image_url": "https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?auto=format&fit=crop&w=900&q=85",
+        "estimated_daily_cost": 12000,
         "is_featured": True,
     },
     {
@@ -45,6 +49,7 @@ DESTINATIONS = [
         "category": "Culture & Heritage",
         "description": "Explore Swahili heritage, historic streets and island culture.",
         "image_url": "https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=900&q=85",
+        "estimated_daily_cost": 8000,
         "is_featured": False,
     },
     {
@@ -53,6 +58,7 @@ DESTINATIONS = [
         "category": "Nature & Adventure",
         "description": "Discover mountain scenery and outdoor experiences.",
         "image_url": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=900&q=85",
+        "estimated_daily_cost": 9000,
         "is_featured": False,
     },
 ]

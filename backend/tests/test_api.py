@@ -1,6 +1,7 @@
 """Automated API tests for Safari Planner."""
 
 import unittest
+from decimal import Decimal
 
 from app import create_app
 from app.extensions import db
@@ -442,3 +443,97 @@ class SafariPlannerAPITests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RecommendationAPITests(unittest.TestCase):
+    """Tests for content-based destination recommendations."""
+
+    def setUp(self):
+        from app.models import Destination
+
+        self.app = create_app(TestConfig)
+        self.client = self.app.test_client()
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+
+        db.create_all()
+
+        db.session.add_all([
+            Destination(
+                name="Maasai Mara",
+                country="Kenya",
+                region="Narok County",
+                category="Wildlife & Safari",
+                description="Wildlife and savannah safari experiences.",
+                estimated_daily_cost=Decimal("12000"),
+                is_featured=True,
+            ),
+            Destination(
+                name="Diani Beach",
+                country="Kenya",
+                region="Kwale County",
+                category="Coastal Escape",
+                description="Beach and ocean relaxation.",
+                estimated_daily_cost=Decimal("8000"),
+            ),
+            Destination(
+                name="Arusha",
+                country="Tanzania",
+                category="Wildlife & Safari",
+                description="Safari destination.",
+            ),
+        ])
+        db.session.commit()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def test_recommendations_return_kenyan_destinations(self):
+        response = self.client.get("/api/recommendations")
+
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(data["count"], 2)
+        self.assertTrue(
+            all(
+                item["country"] == "Kenya"
+                for item in data["recommendations"]
+            )
+        )
+
+    def test_travel_style_influences_ranking(self):
+        response = self.client.get(
+            "/api/recommendations?travel_style=Wildlife%20%26%20Safari"
+        )
+
+        recommendations = response.get_json()["recommendations"]
+        self.assertEqual(recommendations[0]["name"], "Maasai Mara")
+
+    def test_budget_excludes_destinations_over_budget(self):
+        response = self.client.get(
+            "/api/recommendations?budget=25000&duration_days=3"
+        )
+
+        recommendations = response.get_json()["recommendations"]
+        self.assertNotIn(
+            "Maasai Mara",
+            [item["name"] for item in recommendations],
+        )
+        self.assertIn(
+            "Diani Beach",
+            [item["name"] for item in recommendations],
+        )
+
+    def test_interest_influences_recommendations(self):
+        response = self.client.get(
+            "/api/recommendations?interest=beach"
+        )
+
+        recommendations = response.get_json()["recommendations"]
+        self.assertEqual(recommendations[0]["name"], "Diani Beach")
+
+    def test_negative_budget_is_rejected(self):
+        response = self.client.get("/api/recommendations?budget=-100")
+        self.assertEqual(response.status_code, 400)

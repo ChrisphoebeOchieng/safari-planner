@@ -95,6 +95,42 @@ class Destination(db.Model):
 
     itineraries = db.relationship("Itinerary", back_populates="destination")
     saved_by = db.relationship("SavedDestination", back_populates="destination")
+    accommodations = db.relationship(
+        "Accommodation",
+        back_populates="destination",
+        cascade="all, delete-orphan",
+    )
+
+
+class Accommodation(db.Model):
+    """An accommodation listing associated with a Kenyan destination."""
+
+    __tablename__ = "accommodations"
+
+    id = db.Column(db.Integer, primary_key=True)
+    destination_id = db.Column(
+        db.Integer,
+        db.ForeignKey("destinations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    name = db.Column(db.String(180), nullable=False)
+    accommodation_type = db.Column(db.String(60), nullable=False)
+    location = db.Column(db.String(180))
+    description = db.Column(db.Text)
+    estimated_nightly_rate = db.Column(db.Numeric(10, 2))
+    image_url = db.Column(db.String(500))
+    website_url = db.Column(db.String(500))
+    contact_phone = db.Column(db.String(40))
+    is_featured = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(
+        db.DateTime(timezone=True), default=utc_now, nullable=False
+    )
+
+    destination = db.relationship(
+        "Destination",
+        back_populates="accommodations",
+    )
 
 
 class Itinerary(db.Model):

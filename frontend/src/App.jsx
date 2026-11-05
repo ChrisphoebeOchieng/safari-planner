@@ -83,6 +83,18 @@ function App() {
   const [destinationsError, setDestinationsError] = useState('');
   const [destinationSearch, setDestinationSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [recommendationStyle, setRecommendationStyle] = useState('Wildlife & Safari');
+  const [recommendationInterests, setRecommendationInterests] = useState('');
+  const [recommendationBudget, setRecommendationBudget] = useState('');
+  const [recommendationDays, setRecommendationDays] = useState('3');
+  const [recommendations, setRecommendations] = useState([]);
+  const [recommendationsLoading, setRecommendationsLoading] = useState(false);
+  const [recommendationsError, setRecommendationsError] = useState('');
+  const [accommodations, setAccommodations] = useState([]);
+  const [accommodationsLoading, setAccommodationsLoading] = useState(false);
+  const [accommodationsError, setAccommodationsError] = useState('');
+
+
 
   const destinationCategories = [
     ...new Set(
@@ -753,6 +765,54 @@ function App() {
     (destination) => String(destination.id) === String(destinationId)
   );
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAccommodations() {
+      if (!isDestinationPage || !currentDestination?.id) {
+        setAccommodations([]);
+        setAccommodationsError('');
+        setAccommodationsLoading(false);
+        return;
+      }
+
+      setAccommodationsLoading(true);
+      setAccommodationsError('');
+
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/accommodations?destination_id=${currentDestination.id}`
+        );
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Unable to load accommodation options.');
+        }
+
+        if (!cancelled) {
+          setAccommodations(
+            Array.isArray(result.accommodations) ? result.accommodations : []
+          );
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setAccommodationsError(
+            error.message || 'Unable to load accommodation options.'
+          );
+        }
+      } finally {
+        if (!cancelled) setAccommodationsLoading(false);
+      }
+    }
+
+    loadAccommodations();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isDestinationPage, currentDestination?.id]);
+
+
   const now = new Date();
   const today = [
     now.getFullYear(),
@@ -975,6 +1035,110 @@ function App() {
                     </p>
                   </aside>
                 </div>
+
+                <section className="destination-accommodations">
+                  <div className="destination-accommodations__heading">
+                    <span className="eyebrow">
+                      <span className="eyebrow__line" />
+                      WHERE TO STAY
+                    </span>
+                    <h2>Find your <em>place to stay.</em></h2>
+                    <p>
+                      Explore accommodation options around {currentDestination.name}.
+                    </p>
+                  </div>
+
+                  {accommodationsLoading && (
+                    <p className="destination-status">
+                      Loading accommodation options...
+                    </p>
+                  )}
+
+                  {accommodationsError && (
+                    <p className="destination-status" role="alert">
+                      {accommodationsError}
+                    </p>
+                  )}
+
+                  {!accommodationsLoading &&
+                    !accommodationsError &&
+                    accommodations.length === 0 && (
+                      <p className="destination-status">
+                        No accommodation listings are available for this destination yet.
+                      </p>
+                    )}
+
+                  {!accommodationsLoading &&
+                    !accommodationsError &&
+                    accommodations.length > 0 && (
+                      <div className="accommodation-grid">
+                        {accommodations.map((item) => (
+                          <article className="accommodation-card" key={item.id}>
+                            {item.image_url ? (
+                              <img
+                                className="accommodation-card__image"
+                                src={item.image_url}
+                                alt={item.name}
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="accommodation-card__placeholder">
+                                <Icon name="bed-double" size={30} />
+                                <span>ACCOMMODATION</span>
+                              </div>
+                            )}
+
+                            <div className="accommodation-card__body">
+                              <span className="destination-card__category">
+                                {item.accommodation_type}
+                              </span>
+                              <h3>{item.name}</h3>
+                              <p className="accommodation-card__location">
+                                <Icon name="pin" size={14} />
+                                {item.location || currentDestination.region}
+                              </p>
+                              <p className="accommodation-card__description">
+                                {item.description}
+                              </p>
+
+                              <div className="accommodation-card__footer">
+                                <div>
+                                  <strong>
+                                    {item.estimated_nightly_rate
+                                      ? `KES ${Number(item.estimated_nightly_rate).toLocaleString('en-KE')}`
+                                      : 'Contact provider'}
+                                  </strong>
+                                  <span>
+                                    {item.estimated_nightly_rate
+                                      ? 'Indicative rate per night'
+                                      : 'For current rates'}
+                                  </span>
+                                </div>
+
+                                {item.website_url && (
+                                  <a
+                                    className="accommodation-card__link"
+                                    href={item.website_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    Visit website
+                                    <Icon name="arrowRight" size={15} />
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    )}
+
+                  <p className="accommodation-disclaimer">
+                    Rates are indicative where provided. Contact accommodation
+                    providers directly to confirm current prices and availability.
+                    Safari Planner does not process accommodation reservations.
+                  </p>
+                </section>
               </>
             ) : destinationsLoading ? (
               <div className="destination-detail__content">
@@ -1165,6 +1329,217 @@ function App() {
                 No destinations match your search. Try another name or category.
               </p>
             )}
+
+          {isExplorePage && (
+            <section className="recommendation-panel">
+              <div className="recommendation-panel__heading">
+                <span className="eyebrow">
+                  <span className="eyebrow__line" />
+                  YOUR NEXT ADVENTURE
+                </span>
+                <h2>Picked for <em>your journey.</em></h2>
+                <p>
+                  Tell us what inspires you and discover Kenyan destinations
+                  that match your travel preferences.
+                </p>
+              </div>
+
+              <form
+                className="recommendation-form"
+                onSubmit={async (event) => {
+                  event.preventDefault();
+                  setRecommendationsLoading(true);
+                  setRecommendationsError('');
+                  setRecommendations([]);
+
+                  try {
+                    const params = new URLSearchParams({
+                      travel_style: recommendationStyle,
+                      duration_days: recommendationDays,
+                      limit: '6',
+                    });
+
+                    if (recommendationBudget.trim()) {
+                      params.set('budget', recommendationBudget.trim());
+                    }
+
+                    recommendationInterests
+                      .split(',')
+                      .map((interest) => interest.trim())
+                      .filter(Boolean)
+                      .forEach((interest) => params.append('interest', interest));
+
+                    const response = await fetch(
+                      `${API_BASE_URL}/recommendations?${params.toString()}`
+                    );
+                    const result = await response.json();
+
+                    if (!response.ok) {
+                      throw new Error(
+                        result.error || 'Unable to load recommendations.'
+                      );
+                    }
+
+                    setRecommendations(result.recommendations || []);
+
+                    if (!result.recommendations?.length) {
+                      setRecommendationsError(
+                        'No destinations match this budget. Try adjusting your preferences.'
+                      );
+                    }
+                  } catch (error) {
+                    setRecommendationsError(
+                      error.message === 'Failed to fetch'
+                        ? 'Could not connect to the recommendation service. Check that the backend is running.'
+                        : error.message || 'Unable to load recommendations.'
+                    );
+                  } finally {
+                    setRecommendationsLoading(false);
+                  }
+                }}
+              >
+                <label>
+                  Travel style
+                  <select
+                    value={recommendationStyle}
+                    onChange={(event) => setRecommendationStyle(event.target.value)}
+                  >
+                    <option>Wildlife & Safari</option>
+                    <option>Nature & Adventure</option>
+                    <option>Coastal Escape</option>
+                    <option>Culture & Heritage</option>
+                    <option>Relaxation & Wellness</option>
+                  </select>
+                </label>
+
+                <label>
+                  Interests
+                  <input
+                    type="text"
+                    value={recommendationInterests}
+                    onChange={(event) => setRecommendationInterests(event.target.value)}
+                    placeholder="e.g. wildlife, beach, birdlife"
+                  />
+                  <small>Separate interests with commas.</small>
+                </label>
+
+                <label>
+                  Total budget (KES)
+                  <input
+                    type="number"
+                    min="0"
+                    step="100"
+                    value={recommendationBudget}
+                    onChange={(event) => setRecommendationBudget(event.target.value)}
+                    placeholder="Your total budget"
+                  />
+                </label>
+
+                <label>
+                  Travel days
+                  <input
+                    type="number"
+                    min="1"
+                    max="30"
+                    value={recommendationDays}
+                    onChange={(event) => setRecommendationDays(event.target.value)}
+                    required
+                  />
+                </label>
+
+                <button
+                  className="recommendation-form__submit"
+                  type="submit"
+                  disabled={recommendationsLoading}
+                >
+                  {recommendationsLoading
+                    ? 'Finding destinations...'
+                    : 'Find my destinations'}
+                  <Icon name="arrowRight" size={17} />
+                </button>
+              </form>
+
+              {recommendationsError && (
+                <p className="recommendation-message" role="status">
+                  {recommendationsError}
+                </p>
+              )}
+
+              {recommendations.length > 0 && (
+                <div className="recommendation-results">
+                  <div className="recommendation-results__heading">
+                    <h3>Your recommended destinations</h3>
+                    <span>{recommendations.length} matches</span>
+                  </div>
+
+                  <div className="destination-grid">
+                    {recommendations.map((destination, index) => (
+                      <article
+                        className="destination-card recommendation-card"
+                        key={destination.id}
+                      >
+                        <button
+                          className="destination-card__image-button"
+                          onClick={() => navigate(`/destinations/${destination.id}`)}
+                          aria-label={`View ${destination.name} details`}
+                        >
+                          <img
+                            src={destination.image_url || heroImage}
+                            alt={destination.name}
+                            loading="lazy"
+                            onError={(event) => {
+                              event.currentTarget.onerror = null;
+                              event.currentTarget.src = heroImage;
+                            }}
+                          />
+                          <span className="destination-card__number">
+                            0{index + 1}
+                          </span>
+                        </button>
+
+                        <div className="destination-card__body">
+                          <span className="destination-card__category">
+                            {destination.category}
+                          </span>
+                          <h3>{destination.name}</h3>
+                          <p>
+                            <Icon name="pin" size={15} />
+                            {destination.region}, Kenya
+                          </p>
+                          <div className="recommendation-card__cost">
+                            <strong>
+                              {destination.estimated_daily_cost_kes
+                                ? `KES ${Number(destination.estimated_daily_cost_kes).toLocaleString('en-KE')}`
+                                : 'Cost estimate unavailable'}
+                            </strong>
+                            <span>Estimated per day</span>
+                            {destination.estimated_total_cost_kes && (
+                              <div className="recommendation-card__total">
+                                <strong>
+                                  KES {Number(destination.estimated_total_cost_kes).toLocaleString('en-KE')}
+                                </strong>
+                                <span>Estimated total for {recommendationDays} days</span>
+                              </div>
+                            )}
+                          </div>
+                          <ul className="recommendation-card__reasons">
+                            {destination.reasons.map((reason) => (
+                              <li key={reason}>{reason}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+
+                  <p className="recommendation-disclaimer">
+                    Cost figures are indicative planning estimates, not confirmed
+                    prices or booking quotations.
+                  </p>
+                </div>
+              )}
+            </section>
+          )}
 
           <div className="destination-grid">
             {(isExplorePage ? filteredDestinations : destinations).map((destination, index) => (

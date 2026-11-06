@@ -983,7 +983,10 @@ function App() {
           )
         ) : (
           <>
-        {isTransportPage && <TransportPage />}
+            {isTransportPage ? (
+              <TransportPage />
+            ) : (
+              <>
         {isDestinationPage && (
           <section className="destination-detail section-shell">
             <Link className="text-link destination-detail__back" to="/explore">
@@ -2351,6 +2354,8 @@ function App() {
             </div>
           )}
         </section>
+              </>
+            )}
           </>
         )}
       </main>

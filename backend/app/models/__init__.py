@@ -300,7 +300,7 @@ class TransportOption(db.Model):
     provider = db.Column(db.String(150), nullable=False)
     origin = db.Column(db.String(150), nullable=False, index=True)
     destination = db.Column(db.String(150), nullable=False, index=True)
-    estimated_fare = db.Column(db.Numeric(10, 2), nullable=False)
+    estimated_fare = db.Column(db.Numeric(10, 2), nullable=True)
     duration_minutes = db.Column(db.Integer)
     departure_time = db.Column(db.String(20))
     arrival_time = db.Column(db.String(20))

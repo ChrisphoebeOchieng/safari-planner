@@ -19,7 +19,10 @@ def serialize_transport_option(item):
         "provider": item.provider,
         "origin": item.origin,
         "destination": item.destination,
-        "estimated_fare": str(item.estimated_fare),
+        "estimated_fare": (
+            str(item.estimated_fare)
+            if item.estimated_fare is not None else None
+        ),
         "currency": "KES",
         "duration_minutes": item.duration_minutes,
         "departure_time": item.departure_time,
@@ -88,11 +91,11 @@ def list_transport_options():
     if sort_by == "duration":
         statement = statement.order_by(
             TransportOption.duration_minutes.asc().nullslast(),
-            TransportOption.estimated_fare.asc(),
+            TransportOption.estimated_fare.asc().nullslast(),
         )
     else:
         statement = statement.order_by(
-            TransportOption.estimated_fare.asc()
+            TransportOption.estimated_fare.asc().nullslast()
         )
 
     items = db.session.scalars(statement.limit(limit)).all()

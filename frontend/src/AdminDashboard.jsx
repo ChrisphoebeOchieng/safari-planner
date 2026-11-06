@@ -196,7 +196,9 @@ function AdminDashboard({ token, apiBaseUrl, onLogout }) {
         payload.estimated_daily_cost === ''
           ? null : Number(payload.estimated_daily_cost);
     } else {
-      payload.estimated_fare = Number(payload.estimated_fare);
+      payload.estimated_fare =
+        payload.estimated_fare === ''
+          ? null : Number(payload.estimated_fare);
       payload.duration_minutes =
         payload.duration_minutes === ''
           ? null : Number(payload.duration_minutes);
@@ -520,7 +522,11 @@ function AdminDashboard({ token, apiBaseUrl, onLogout }) {
                             <td><strong>{item.provider}</strong></td>
                             <td>{item.transport_type.toUpperCase()}</td>
                             <td>{item.origin} → {item.destination}</td>
-                            <td>KES {Number(item.estimated_fare).toLocaleString('en-KE')}</td>
+                            <td>
+                              {item.estimated_fare == null
+                                ? 'Not provided'
+                                : `KES ${Number(item.estimated_fare).toLocaleString('en-KE')}`}
+                            </td>
                             <td>{item.duration_minutes ? `${item.duration_minutes} min` : 'Not set'}</td>
                             <td>
                               <span className={`admin-status ${item.is_active ? 'is-active' : 'is-inactive'}`}>
@@ -639,11 +645,11 @@ function AdminDashboard({ token, apiBaseUrl, onLogout }) {
                       <label>Provider<input required maxLength="150" value={form.provider} onChange={(e) => setForm({ ...form, provider: e.target.value })} /></label>
                       <label>Origin<input required maxLength="150" value={form.origin} onChange={(e) => setForm({ ...form, origin: e.target.value })} /></label>
                       <label>Destination<input required maxLength="150" value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })} /></label>
-                      <label>Estimated fare (KES)<input required type="number" min="0" step="0.01" value={form.estimated_fare} onChange={(e) => setForm({ ...form, estimated_fare: e.target.value })} /></label>
+                      <label>Estimated fare (KES)<input type="number" min="0" step="0.01" placeholder="Leave blank if unpublished" value={form.estimated_fare} onChange={(e) => setForm({ ...form, estimated_fare: e.target.value })} /></label>
                       <label>Estimated duration (minutes)<input type="number" min="1" step="1" value={form.duration_minutes} onChange={(e) => setForm({ ...form, duration_minutes: e.target.value })} /></label>
                       <label>Departure time<input maxLength="20" placeholder="e.g. 08:00" value={form.departure_time} onChange={(e) => setForm({ ...form, departure_time: e.target.value })} /></label>
                       <label>Arrival time<input maxLength="20" placeholder="e.g. 13:00" value={form.arrival_time} onChange={(e) => setForm({ ...form, arrival_time: e.target.value })} /></label>
-                      <label>Booking URL<input type="url" value={form.booking_url} onChange={(e) => setForm({ ...form, booking_url: e.target.value })} /></label>
+                      <label>Official booking URL<input type="url" required={form.is_active} placeholder="https://..." value={form.booking_url} onChange={(e) => setForm({ ...form, booking_url: e.target.value })} /></label>
                       <label>Notes<textarea rows="3" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></label>
                       <label className="admin-checkbox">
                         <input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} />

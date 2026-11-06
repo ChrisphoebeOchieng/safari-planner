@@ -541,8 +541,6 @@ def validate_transport_option(data, item=None):
         fare, error = optional_money(data, "estimated_fare")
         if error:
             return None, error
-        if fare is None:
-            return None, "estimated_fare is required."
         values["estimated_fare"] = fare
 
     if "duration_minutes" in data or item is None:
@@ -583,6 +581,16 @@ def validate_transport_option(data, item=None):
     if origin and destination and origin.casefold() == destination.casefold():
         return None, "Origin and destination must be different."
 
+    is_active = values.get(
+        "is_active", item.is_active if item else True
+    )
+    booking_url = values.get(
+        "booking_url", item.booking_url if item else None
+    )
+
+    if is_active and not booking_url:
+        return None, "An active transport option must have a booking URL."
+
     return values, None
 
 
@@ -594,7 +602,10 @@ def serialize_admin_transport(item):
         "provider": item.provider,
         "origin": item.origin,
         "destination": item.destination,
-        "estimated_fare": str(item.estimated_fare),
+        "estimated_fare": (
+            str(item.estimated_fare)
+            if item.estimated_fare is not None else None
+        ),
         "duration_minutes": item.duration_minutes,
         "departure_time": item.departure_time,
         "arrival_time": item.arrival_time,

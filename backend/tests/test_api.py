@@ -16,8 +16,8 @@ class TestConfig:
     TESTING = True
     SQLALCHEMY_DATABASE_URI = "sqlite://"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SECRET_KEY = "test-secret"
-    JWT_SECRET_KEY = "test-jwt-secret"
+    SECRET_KEY = "safari-planner-test-secret-key-minimum-32-bytes"
+    JWT_SECRET_KEY = "safari-planner-test-jwt-signing-key-minimum-32-bytes"
     JWT_ACCESS_TOKEN_EXPIRES = False
     FRONTEND_ORIGIN = "http://localhost:5173"
 

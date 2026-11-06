@@ -12,14 +12,21 @@ const transportTypes = [
 ];
 
 function formatFare(value) {
-  const amount = Number(value);
+  if (value == null || value === '') return 'Fare unavailable';
 
+  const amount = Number(value);
   if (!Number.isFinite(amount)) return 'Fare unavailable';
 
   return `KES ${amount.toLocaleString('en-KE', {
     maximumFractionDigits: 0,
   })}`;
 }
+
+const transportPhotos = {
+  flight: 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=1200&q=85',
+  bus: 'https://images.unsplash.com/photo-1570125909232-eb263c188f7e?auto=format&fit=crop&w=1200&q=85',
+  sgr: 'https://images.unsplash.com/photo-1474487548417-781cb71495f3?auto=format&fit=crop&w=1200&q=85',
+};
 
 function formatDuration(minutes) {
   if (minutes == null || !Number.isFinite(Number(minutes))) {
@@ -247,6 +254,25 @@ function TransportPage() {
         <div className="transport-options">
           {options.map((option) => (
             <article className="transport-card" key={option.id}>
+              <div className="transport-card__image-wrap">
+                <img
+                  className="transport-card__image"
+                  src={transportPhotos[option.transport_type] || transportPhotos.flight}
+                  alt={
+                    option.transport_type === 'flight'
+                      ? 'Aircraft in flight'
+                      : option.transport_type === 'bus'
+                        ? 'Passenger coach bus'
+                        : 'Passenger train'
+                  }
+                  loading="lazy"
+                />
+                <span className="transport-card__image-label">
+                  {option.transport_type === 'sgr'
+                    ? 'RAIL JOURNEY'
+                    : `${option.transport_type.toUpperCase()} JOURNEY`}
+                </span>
+              </div>
               <div className="transport-card__top">
                 <span className="transport-card__type">
                   {option.transport_type === 'sgr'

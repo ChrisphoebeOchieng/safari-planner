@@ -2807,3 +2807,30 @@
     flex-direction: column;
   }
 }
+
+.admin-access-message {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 14px;
+  min-height: 70vh;
+  padding: 30px;
+  text-align: center;
+  background: var(--cream);
+}
+.admin-access-message h1 {
+  font-family: var(--serif);
+  font-size: 34px;
+  font-weight: 400;
+}
+.admin-access-message p {
+  color: var(--muted);
+  font-size: 13px;
+}
+.admin-access-message button {
+  padding: 12px 20px;
+  border: 0;
+  background: var(--olive);
+  color: white;
+  cursor: pointer;
+}

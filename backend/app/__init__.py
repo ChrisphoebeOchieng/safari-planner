@@ -6,6 +6,7 @@ from . import models
 from .config import Config
 from .extensions import cors, db, jwt, migrate
 from .routes.accommodations import accommodations_bp
+from .routes.admin import admin_bp
 from .routes.auth import auth_bp
 from .routes.destinations import destinations_bp
 from .routes.health import health_bp
@@ -41,6 +42,7 @@ def create_app(config_class=Config):
         },
     )
 
+    app.register_blueprint(admin_bp, url_prefix="/api")
     app.register_blueprint(health_bp, url_prefix="/api")
     app.register_blueprint(auth_bp, url_prefix="/api")
     app.register_blueprint(trip_preferences_bp, url_prefix="/api")

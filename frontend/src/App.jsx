@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import AuthPage from './AuthPage';
+import AdminDashboard from './AdminDashboard';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import heroImage from './assets/hero.png';
 import './App.css';
@@ -646,7 +647,7 @@ function App() {
       setAuthToken(result.access_token);
       setCurrentUser(result.user);
       setAuthForm({ full_name: '', email: '', password: '' });
-      navigate('/my-trips');
+      navigate(result.user?.role === 'admin' ? '/admin' : '/my-trips');
     } catch (err) {
       setAuthError(
         err.message === 'Failed to fetch'
@@ -860,6 +861,40 @@ function App() {
     window.scrollTo({ top: 0, behavior: "instant" });
     setMobileOpen(false);
   }, [pathname]);
+
+  if (pathname.startsWith('/admin')) {
+    if (authChecking) {
+      return <main className="admin-access-message">Checking administrator access...</main>;
+    }
+
+    if (!currentUser || !authToken) {
+      return (
+        <main className="admin-access-message">
+          <h1>Administrator sign in required</h1>
+          <p>Please sign in with your administrator account to continue.</p>
+          <button type="button" onClick={() => navigate('/login')}>Go to sign in</button>
+        </main>
+      );
+    }
+
+    if (currentUser.role !== 'admin') {
+      return (
+        <main className="admin-access-message">
+          <h1>Access restricted</h1>
+          <p>This area is available to administrators only.</p>
+          <button type="button" onClick={() => navigate('/')}>Return to Safari Planner</button>
+        </main>
+      );
+    }
+
+    return (
+      <AdminDashboard
+        token={authToken}
+        apiBaseUrl={API_BASE_URL}
+        onLogout={logout}
+      />
+    );
+  }
 
   return (
     <>

@@ -1,6 +1,8 @@
 """Automated API tests for Safari Planner."""
 
 import unittest
+
+from sqlalchemy import select
 from decimal import Decimal
 
 from app import create_app
@@ -537,3 +539,121 @@ class RecommendationAPITests(unittest.TestCase):
     def test_negative_budget_is_rejected(self):
         response = self.client.get("/api/recommendations?budget=-100")
         self.assertEqual(response.status_code, 400)
+
+
+class AdminAPITests(unittest.TestCase):
+    """Tests for administrator authorization and management."""
+
+    def setUp(self):
+        self.app = create_app(TestConfig)
+        self.client = self.app.test_client()
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+
+        db.create_all()
+
+        from app.models import Destination
+
+        db.session.add_all([
+            Role(name="traveler", description="Test traveler"),
+            Role(name="admin", description="Test administrator"),
+            Role(name="agency", description="Test agency"),
+        ])
+        db.session.commit()
+
+        self.traveler = User(
+            full_name="Test Traveler",
+            email="traveler@example.com",
+            role_id=db.session.scalar(
+                select(Role).where(Role.name == "traveler")
+            ).id,
+        )
+        self.traveler.set_password("StrongPass123")
+
+        self.admin = User(
+            full_name="Test Administrator",
+            email="admin@example.com",
+            role_id=db.session.scalar(
+                select(Role).where(Role.name == "admin")
+            ).id,
+        )
+        self.admin.set_password("StrongPass123")
+
+        db.session.add_all([self.traveler, self.admin])
+        db.session.commit()
+
+        self.traveler_token = self.login("traveler@example.com")
+        self.admin_token = self.login("admin@example.com")
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def login(self, email):
+        response = self.client.post(
+            "/api/auth/login",
+            json={
+                "email": email,
+                "password": "StrongPass123",
+            },
+        )
+        return response.get_json()["access_token"]
+
+    def headers(self, token):
+        return {"Authorization": f"Bearer {token}"}
+
+    def test_admin_dashboard_requires_authentication(self):
+        response = self.client.get("/api/admin/dashboard")
+        self.assertEqual(response.status_code, 401)
+
+    def test_traveler_cannot_access_admin_dashboard(self):
+        response = self.client.get(
+            "/api/admin/dashboard",
+            headers=self.headers(self.traveler_token),
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_admin_can_access_dashboard(self):
+        response = self.client.get(
+            "/api/admin/dashboard",
+            headers=self.headers(self.admin_token),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("statistics", response.get_json())
+
+    def test_admin_can_create_kenyan_destination(self):
+        response = self.client.post(
+            "/api/admin/destinations",
+            headers=self.headers(self.admin_token),
+            json={
+                "name": "Test Destination",
+                "region": "Nakuru County",
+                "category": "Nature & Adventure",
+                "description": "A test destination in Kenya.",
+                "estimated_daily_cost": 5000,
+            },
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(
+            response.get_json()["destination"]["country"],
+            "Kenya",
+        )
+
+    def test_admin_cannot_create_non_kenyan_destination(self):
+        response = self.client.post(
+            "/api/admin/destinations",
+            headers=self.headers(self.admin_token),
+            json={
+                "name": "Test Destination",
+                "country": "Tanzania",
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+
+if __name__ == "__main__":
+    unittest.main()

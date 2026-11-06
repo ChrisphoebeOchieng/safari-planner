@@ -9,7 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from ..auth.permissions import admin_required
 from ..extensions import db
-from ..models import Accommodation, Destination, Itinerary, Role, User
+from ..models import (Accommodation, Destination, Itinerary, Role, TransportOption, User)
 from .accommodations import serialize_accommodation
 from .destinations import serialize_destination
 
@@ -496,3 +496,191 @@ def admin_update_user(user_id):
     except SQLAlchemyError:
         db.session.rollback()
         return jsonify({"error": "Unable to update user account."}), 500
+
+
+# ---------------------------------------------------------
+# Transport option management
+# ---------------------------------------------------------
+
+def validate_transport_option(data, item=None):
+    """Validate a transport option for creation or partial update."""
+    values = {}
+    fields = {
+        "provider": (150, True),
+        "origin": (150, True),
+        "destination": (150, True),
+        "departure_time": (20, False),
+        "arrival_time": (20, False),
+        "notes": (5000, False),
+    }
+
+    for field, (maximum, required) in fields.items():
+        if field not in data and item is not None:
+            continue
+
+        value, error = optional_text(
+            data, field, maximum, required=required
+        )
+        if error:
+            return None, error
+        values[field] = value
+
+    if "transport_type" in data or item is None:
+        transport_type, error = optional_text(
+            data, "transport_type", 30, required=True
+        )
+        if error:
+            return None, error
+
+        if transport_type not in {"flight", "bus", "sgr"}:
+            return None, "transport_type must be flight, bus or sgr."
+
+        values["transport_type"] = transport_type
+
+    if "estimated_fare" in data or item is None:
+        fare, error = optional_money(data, "estimated_fare")
+        if error:
+            return None, error
+        if fare is None:
+            return None, "estimated_fare is required."
+        values["estimated_fare"] = fare
+
+    if "duration_minutes" in data or item is None:
+        duration = data.get("duration_minutes")
+
+        if duration is None or duration == "":
+            values["duration_minutes"] = None
+        elif isinstance(duration, bool):
+            return None, "duration_minutes must be a positive integer."
+        else:
+            try:
+                duration = int(duration)
+                if duration <= 0:
+                    raise ValueError
+            except (TypeError, ValueError):
+                return None, "duration_minutes must be a positive integer."
+            values["duration_minutes"] = duration
+
+    if "booking_url" in data:
+        value, error = optional_url(data, "booking_url")
+        if error:
+            return None, error
+        values["booking_url"] = value
+
+    if "is_active" in data:
+        value, error = optional_boolean(data, "is_active")
+        if error:
+            return None, error
+        values["is_active"] = value
+    elif item is None:
+        values["is_active"] = True
+
+    origin = values.get("origin", item.origin if item else None)
+    destination = values.get(
+        "destination", item.destination if item else None
+    )
+
+    if origin and destination and origin.casefold() == destination.casefold():
+        return None, "Origin and destination must be different."
+
+    return values, None
+
+
+def serialize_admin_transport(item):
+    """Serialize a transport option for administrator management."""
+    return {
+        "id": item.id,
+        "transport_type": item.transport_type,
+        "provider": item.provider,
+        "origin": item.origin,
+        "destination": item.destination,
+        "estimated_fare": str(item.estimated_fare),
+        "duration_minutes": item.duration_minutes,
+        "departure_time": item.departure_time,
+        "arrival_time": item.arrival_time,
+        "booking_url": item.booking_url,
+        "notes": item.notes,
+        "is_active": item.is_active,
+    }
+
+
+@admin_bp.get("/admin/transport")
+@jwt_required()
+@admin_required
+def admin_list_transport():
+    """List all transport options for administrators."""
+    items = db.session.scalars(
+        select(TransportOption).order_by(
+            TransportOption.created_at.desc()
+        )
+    ).all()
+
+    return jsonify({
+        "count": len(items),
+        "transport_options": [
+            serialize_admin_transport(item) for item in items
+        ],
+    }), 200
+
+
+@admin_bp.post("/admin/transport")
+@jwt_required()
+@admin_required
+def admin_create_transport():
+    """Create a transport option."""
+    data = json_body()
+    if data is None:
+        return jsonify({"error": "A JSON request body is required."}), 400
+
+    values, error = validate_transport_option(data)
+    if error:
+        return jsonify({"error": error}), 400
+
+    item = TransportOption(**values)
+
+    try:
+        db.session.add(item)
+        db.session.commit()
+        return jsonify({
+            "message": "Transport option created successfully.",
+            "transport_option": serialize_admin_transport(item),
+        }), 201
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify({
+            "error": "Unable to create transport option."
+        }), 500
+
+
+@admin_bp.patch("/admin/transport/<int:transport_id>")
+@jwt_required()
+@admin_required
+def admin_update_transport(transport_id):
+    """Update a transport option, including its active status."""
+    item = db.session.get(TransportOption, transport_id)
+
+    if item is None:
+        return jsonify({"error": "Transport option not found."}), 404
+
+    data = json_body()
+    if data is None:
+        return jsonify({"error": "A JSON request body is required."}), 400
+
+    values, error = validate_transport_option(data, item)
+    if error:
+        return jsonify({"error": error}), 400
+
+    for field, value in values.items():
+        setattr(item, field, value)
+
+    try:
+        db.session.commit()
+        return jsonify({
+            "message": "Transport option updated successfully.",
+            "transport_option": serialize_admin_transport(item),
+        }), 200
+    except SQLAlchemyError:
+        db.session.rollback()
+        return jsonify({
+            "error": "Unable to update transport option."
+        }), 500

@@ -13,6 +13,7 @@ from .routes.health import health_bp
 from .routes.itineraries import itineraries_bp
 from .routes.recommendations import recommendations_bp
 from .routes.trip_preferences import trip_preferences_bp
+from .routes.transport import transport_bp
 
 
 def create_app(config_class=Config):
@@ -50,5 +51,6 @@ def create_app(config_class=Config):
     app.register_blueprint(accommodations_bp, url_prefix="/api")
     app.register_blueprint(itineraries_bp, url_prefix="/api")
     app.register_blueprint(recommendations_bp, url_prefix="/api")
+    app.register_blueprint(transport_bp, url_prefix="/api")
 
     return app

@@ -5,6 +5,7 @@ const sections = [
   { id: 'overview', label: 'Overview', icon: '◫' },
   { id: 'destinations', label: 'Destinations', icon: '⌖' },
   { id: 'accommodations', label: 'Accommodations', icon: '⌂' },
+  { id: 'transport', label: 'Transport', icon: '↗' },
   { id: 'users', label: 'Users', icon: '♧' },
 ];
 
@@ -31,11 +32,26 @@ const emptyAccommodation = {
   is_featured: false,
 };
 
+const emptyTransport = {
+  transport_type: 'sgr',
+  provider: '',
+  origin: '',
+  destination: '',
+  estimated_fare: '',
+  duration_minutes: '',
+  departure_time: '',
+  arrival_time: '',
+  booking_url: '',
+  notes: '',
+  is_active: true,
+};
+
 function AdminDashboard({ token, apiBaseUrl, onLogout }) {
   const [section, setSection] = useState('overview');
   const [statistics, setStatistics] = useState({});
   const [destinations, setDestinations] = useState([]);
   const [accommodations, setAccommodations] = useState([]);
+  const [transportOptions, setTransportOptions] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -69,17 +85,19 @@ function AdminDashboard({ token, apiBaseUrl, onLogout }) {
     setError('');
 
     try {
-      const [dashboard, destinationData, accommodationData, userData] =
+      const [dashboard, destinationData, accommodationData, transportData, userData] =
         await Promise.all([
           request('/admin/dashboard'),
           request('/admin/destinations'),
           request('/admin/accommodations'),
+          request('/admin/transport'),
           request('/admin/users'),
         ]);
 
       setStatistics(dashboard.statistics || {});
       setDestinations(destinationData.destinations || []);
       setAccommodations(accommodationData.accommodations || []);
+      setTransportOptions(transportData.transport_options || []);
       setUsers(userData.users || []);
     } catch (err) {
       setError(err.message || 'Unable to load the administration dashboard.');
@@ -95,10 +113,13 @@ function AdminDashboard({ token, apiBaseUrl, onLogout }) {
   function openCreate(type) {
     setFormType(type);
     setEditingId(null);
-    setForm(type === 'destination' ? emptyDestination : {
-      ...emptyAccommodation,
-      destination_id: destinations[0]?.id || '',
-    });
+    setForm(
+      type === 'destination' ? emptyDestination :
+      type === 'accommodation' ? {
+        ...emptyAccommodation,
+        destination_id: destinations[0]?.id || '',
+      } : emptyTransport
+    );
     setNotice('');
     setError('');
   }
@@ -117,7 +138,7 @@ function AdminDashboard({ token, apiBaseUrl, onLogout }) {
         estimated_daily_cost: item.estimated_daily_cost || '',
         is_featured: Boolean(item.is_featured),
       });
-    } else {
+    } else if (type === 'accommodation') {
       setForm({
         destination_id: String(item.destination_id),
         name: item.name || '',
@@ -129,6 +150,20 @@ function AdminDashboard({ token, apiBaseUrl, onLogout }) {
         website_url: item.website_url || '',
         contact_phone: item.contact_phone || '',
         is_featured: Boolean(item.is_featured),
+      });
+    } else {
+      setForm({
+        transport_type: item.transport_type || 'sgr',
+        provider: item.provider || '',
+        origin: item.origin || '',
+        destination: item.destination || '',
+        estimated_fare: item.estimated_fare || '',
+        duration_minutes: item.duration_minutes ?? '',
+        departure_time: item.departure_time || '',
+        arrival_time: item.arrival_time || '',
+        booking_url: item.booking_url || '',
+        notes: item.notes || '',
+        is_active: Boolean(item.is_active),
       });
     }
 
@@ -143,7 +178,12 @@ function AdminDashboard({ token, apiBaseUrl, onLogout }) {
     setNotice('');
 
     const type = formType;
-    const collection = type === 'destination' ? 'destinations' : 'accommodations';
+    const collection = {
+      destination: 'destinations',
+      accommodation: 'accommodations',
+      transport: 'transport',
+    }[type];
+
     const payload = { ...form };
 
     if (type === 'accommodation') {
@@ -151,10 +191,15 @@ function AdminDashboard({ token, apiBaseUrl, onLogout }) {
       payload.estimated_nightly_rate =
         payload.estimated_nightly_rate === ''
           ? null : Number(payload.estimated_nightly_rate);
-    } else {
+    } else if (type === 'destination') {
       payload.estimated_daily_cost =
         payload.estimated_daily_cost === ''
           ? null : Number(payload.estimated_daily_cost);
+    } else {
+      payload.estimated_fare = Number(payload.estimated_fare);
+      payload.duration_minutes =
+        payload.duration_minutes === ''
+          ? null : Number(payload.duration_minutes);
     }
 
     try {
@@ -168,10 +213,14 @@ function AdminDashboard({ token, apiBaseUrl, onLogout }) {
 
       setFormType('');
       setEditingId(null);
+      const label = {
+        destination: 'Destination',
+        accommodation: 'Accommodation',
+        transport: 'Transport option',
+      }[type];
+
       setNotice(
-        `${type === 'destination' ? 'Destination' : 'Accommodation'} ${
-          editingId ? 'updated' : 'created'
-        } successfully.`,
+        `${label} ${editingId ? 'updated' : 'created'} successfully.`,
       );
       await loadDashboard();
     } catch (err) {
@@ -205,6 +254,25 @@ function AdminDashboard({ token, apiBaseUrl, onLogout }) {
     }
   }
 
+  async function toggleTransport(item) {
+    setError('');
+    setNotice('');
+
+    try {
+      await request(`/admin/transport/${item.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ is_active: !item.is_active }),
+      });
+
+      setNotice(
+        `${item.provider} was ${item.is_active ? 'deactivated' : 'activated'}.`,
+      );
+      await loadDashboard();
+    } catch (err) {
+      setError(err.message || 'Unable to update this transport option.');
+    }
+  }
+
   async function toggleUser(user) {
     setError('');
     setNotice('');
@@ -226,6 +294,7 @@ function AdminDashboard({ token, apiBaseUrl, onLogout }) {
     { label: 'Registered users', value: statistics.users ?? 0, icon: '♧' },
     { label: 'Destinations', value: statistics.destinations ?? 0, icon: '⌖' },
     { label: 'Accommodations', value: statistics.accommodations ?? 0, icon: '⌂' },
+    { label: 'Transport options', value: transportOptions.length, icon: '↗' },
     { label: 'Saved itineraries', value: statistics.itineraries ?? 0, icon: '▤' },
   ];
 
@@ -332,6 +401,9 @@ function AdminDashboard({ token, apiBaseUrl, onLogout }) {
                       <button type="button" onClick={() => openCreate('accommodation')}>
                         + Add accommodation
                       </button>
+                      <button type="button" onClick={() => openCreate('transport')}>
+                        + Add transport option
+                      </button>
                     </article>
                   </div>
                 </>
@@ -413,6 +485,71 @@ function AdminDashboard({ token, apiBaseUrl, onLogout }) {
                 </div>
               )}
 
+              {section === 'transport' && (
+                <div className="admin-panel">
+                  <div className="admin-section-heading">
+                    <div>
+                      <span className="admin-eyebrow">KENYA TRANSPORT DIRECTORY</span>
+                      <h2>Transport options</h2>
+                      <p>{transportOptions.length} transport listings · Indicative fares in KES</p>
+                    </div>
+                    <button
+                      className="admin-primary-button"
+                      onClick={() => openCreate('transport')}
+                    >
+                      + Add transport option
+                    </button>
+                  </div>
+
+                  <div className="admin-table-wrap">
+                    <table className="admin-table">
+                      <thead>
+                        <tr>
+                          <th>Provider</th>
+                          <th>Type</th>
+                          <th>Route</th>
+                          <th>Indicative fare</th>
+                          <th>Duration</th>
+                          <th>Status</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {transportOptions.map((item) => (
+                          <tr key={item.id}>
+                            <td><strong>{item.provider}</strong></td>
+                            <td>{item.transport_type.toUpperCase()}</td>
+                            <td>{item.origin} → {item.destination}</td>
+                            <td>KES {Number(item.estimated_fare).toLocaleString('en-KE')}</td>
+                            <td>{item.duration_minutes ? `${item.duration_minutes} min` : 'Not set'}</td>
+                            <td>
+                              <span className={`admin-status ${item.is_active ? 'is-active' : 'is-inactive'}`}>
+                                {item.is_active ? 'Active' : 'Inactive'}
+                              </span>
+                            </td>
+                            <td className="admin-actions">
+                              <button onClick={() => openEdit('transport', item)}>Edit</button>
+                              <button
+                                className={item.is_active ? 'is-danger' : ''}
+                                onClick={() => toggleTransport(item)}
+                              >
+                                {item.is_active ? 'Deactivate' : 'Activate'}
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {transportOptions.length === 0 && (
+                      <p className="admin-empty">No transport options have been added yet.</p>
+                    )}
+                  </div>
+                  <p className="admin-empty">
+                    Fares and journey durations are estimates and should be confirmed with providers.
+                  </p>
+                </div>
+              )}
+
               {section === 'users' && (
                 <div className="admin-panel">
                   <div className="admin-section-heading">
@@ -478,7 +615,7 @@ function AdminDashboard({ token, apiBaseUrl, onLogout }) {
                       <label>Image URL<input type="url" value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} /></label>
                       <label>Estimated daily cost (KES)<input type="number" min="0" step="0.01" value={form.estimated_daily_cost} onChange={(e) => setForm({ ...form, estimated_daily_cost: e.target.value })} /></label>
                     </>
-                  ) : (
+                  ) : formType === 'accommodation' ? (
                     <>
                       <label>Property name<input required maxLength="180" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
                       <label>Destination<select required value={form.destination_id} onChange={(e) => setForm({ ...form, destination_id: e.target.value })}>{destinations.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
@@ -490,12 +627,37 @@ function AdminDashboard({ token, apiBaseUrl, onLogout }) {
                       <label>Website URL<input type="url" value={form.website_url} onChange={(e) => setForm({ ...form, website_url: e.target.value })} /></label>
                       <label>Contact phone<input maxLength="40" value={form.contact_phone} onChange={(e) => setForm({ ...form, contact_phone: e.target.value })} /></label>
                     </>
+                  ) : (
+                    <>
+                      <label>Transport type
+                        <select required value={form.transport_type} onChange={(e) => setForm({ ...form, transport_type: e.target.value })}>
+                          <option value="flight">Flight</option>
+                          <option value="bus">Bus</option>
+                          <option value="sgr">SGR</option>
+                        </select>
+                      </label>
+                      <label>Provider<input required maxLength="150" value={form.provider} onChange={(e) => setForm({ ...form, provider: e.target.value })} /></label>
+                      <label>Origin<input required maxLength="150" value={form.origin} onChange={(e) => setForm({ ...form, origin: e.target.value })} /></label>
+                      <label>Destination<input required maxLength="150" value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })} /></label>
+                      <label>Estimated fare (KES)<input required type="number" min="0" step="0.01" value={form.estimated_fare} onChange={(e) => setForm({ ...form, estimated_fare: e.target.value })} /></label>
+                      <label>Estimated duration (minutes)<input type="number" min="1" step="1" value={form.duration_minutes} onChange={(e) => setForm({ ...form, duration_minutes: e.target.value })} /></label>
+                      <label>Departure time<input maxLength="20" placeholder="e.g. 08:00" value={form.departure_time} onChange={(e) => setForm({ ...form, departure_time: e.target.value })} /></label>
+                      <label>Arrival time<input maxLength="20" placeholder="e.g. 13:00" value={form.arrival_time} onChange={(e) => setForm({ ...form, arrival_time: e.target.value })} /></label>
+                      <label>Booking URL<input type="url" value={form.booking_url} onChange={(e) => setForm({ ...form, booking_url: e.target.value })} /></label>
+                      <label>Notes<textarea rows="3" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></label>
+                      <label className="admin-checkbox">
+                        <input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} />
+                        Make this option visible to travellers
+                      </label>
+                    </>
                   )}
 
-                  <label className="admin-checkbox">
-                    <input type="checkbox" checked={form.is_featured} onChange={(e) => setForm({ ...form, is_featured: e.target.checked })} />
-                    Feature this listing
-                  </label>
+                  {formType !== 'transport' && (
+                    <label className="admin-checkbox">
+                      <input type="checkbox" checked={form.is_featured} onChange={(e) => setForm({ ...form, is_featured: e.target.checked })} />
+                      Feature this listing
+                    </label>
+                  )}
 
                   <div className="admin-form-actions">
                     <button type="button" className="admin-secondary-button" onClick={() => setFormType('')}>Cancel</button>

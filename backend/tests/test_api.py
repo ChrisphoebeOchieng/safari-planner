@@ -7,7 +7,7 @@ from decimal import Decimal
 
 from app import create_app
 from app.extensions import db
-from app.models import Role, User, TripPreference
+from app.models import Role, User, TripPreference, TransportOption
 
 
 class TestConfig:
@@ -441,6 +441,346 @@ class SafariPlannerAPITests(unittest.TestCase):
         )
 
         self.assertEqual(response.status_code, 404)
+
+
+class TransportAPITests(unittest.TestCase):
+    """Tests for public transport comparison."""
+
+    def setUp(self):
+        self.app = create_app(TestConfig)
+        self.client = self.app.test_client()
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+
+        db.create_all()
+
+        db.session.add_all([
+            TransportOption(
+                transport_type="sgr",
+                provider="Kenya Railways",
+                origin="Nairobi",
+                destination="Mombasa",
+                estimated_fare=Decimal("1500.00"),
+                duration_minutes=300,
+                departure_time="08:00",
+                arrival_time="13:00",
+                is_active=True,
+            ),
+            TransportOption(
+                transport_type="bus",
+                provider="Example Bus",
+                origin="Nairobi",
+                destination="Mombasa",
+                estimated_fare=Decimal("1800.00"),
+                duration_minutes=540,
+                is_active=True,
+            ),
+            TransportOption(
+                transport_type="flight",
+                provider="Example Airline",
+                origin="Nairobi",
+                destination="Mombasa",
+                estimated_fare=Decimal("8500.00"),
+                duration_minutes=75,
+                is_active=True,
+            ),
+            TransportOption(
+                transport_type="bus",
+                provider="Inactive Bus",
+                origin="Nairobi",
+                destination="Kisumu",
+                estimated_fare=Decimal("1200.00"),
+                duration_minutes=420,
+                is_active=False,
+            ),
+        ])
+        db.session.commit()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def test_transport_options_are_returned(self):
+        response = self.client.get("/api/transport")
+
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(data["count"], 3)
+        self.assertEqual(
+            data["transport_options"][0]["currency"],
+            "KES",
+        )
+        self.assertEqual(
+            data["transport_options"][0]["fare_type"],
+            "indicative",
+        )
+        self.assertIn("disclaimer", data)
+
+    def test_transport_can_be_filtered_by_type(self):
+        response = self.client.get("/api/transport?type=sgr")
+
+        self.assertEqual(response.status_code, 200)
+        options = response.get_json()["transport_options"]
+        self.assertEqual(len(options), 1)
+        self.assertEqual(options[0]["transport_type"], "sgr")
+
+    def test_transport_can_be_filtered_by_route(self):
+        response = self.client.get(
+            "/api/transport?origin=nairobi&destination=mombasa"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        options = response.get_json()["transport_options"]
+        self.assertEqual(len(options), 3)
+
+    def test_transport_can_be_sorted_by_fare(self):
+        response = self.client.get("/api/transport?sort_by=fare")
+
+        options = response.get_json()["transport_options"]
+        fares = [Decimal(item["estimated_fare"]) for item in options]
+
+        self.assertEqual(fares, sorted(fares))
+
+    def test_transport_can_be_sorted_by_duration(self):
+        response = self.client.get("/api/transport?sort_by=duration")
+
+        options = response.get_json()["transport_options"]
+        durations = [item["duration_minutes"] for item in options]
+
+        self.assertEqual(durations, sorted(durations))
+
+    def test_inactive_transport_options_are_excluded(self):
+        response = self.client.get("/api/transport")
+
+        providers = [
+            item["provider"]
+            for item in response.get_json()["transport_options"]
+        ]
+        self.assertNotIn("Inactive Bus", providers)
+
+    def test_invalid_transport_type_is_rejected(self):
+        response = self.client.get("/api/transport?type=train")
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_invalid_sort_option_is_rejected(self):
+        response = self.client.get("/api/transport?sort_by=provider")
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_invalid_limit_is_rejected(self):
+        response = self.client.get("/api/transport?limit=0")
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_invalid_limit_text_is_rejected(self):
+        response = self.client.get("/api/transport?limit=abc")
+
+        self.assertEqual(response.status_code, 400)
+
+
+class AdminTransportAPITests(unittest.TestCase):
+    """Tests for administrator transport management."""
+
+    def setUp(self):
+        self.app = create_app(TestConfig)
+        self.client = self.app.test_client()
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+
+        db.create_all()
+
+        traveler_role = Role(name="traveler")
+        admin_role = Role(name="admin")
+        db.session.add_all([traveler_role, admin_role])
+        db.session.flush()
+
+        traveler = User(
+            full_name="Test Traveler",
+            email="traveler@example.com",
+            role_id=traveler_role.id,
+        )
+        traveler.set_password("StrongPass123")
+
+        admin = User(
+            full_name="Test Admin",
+            email="admin@example.com",
+            role_id=admin_role.id,
+        )
+        admin.set_password("StrongPass123")
+
+        db.session.add_all([traveler, admin])
+        db.session.commit()
+
+        self.traveler_token = self.login("traveler@example.com")
+        self.admin_token = self.login("admin@example.com")
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def login(self, email):
+        response = self.client.post(
+            "/api/auth/login",
+            json={
+                "email": email,
+                "password": "StrongPass123",
+            },
+        )
+        return response.get_json()["access_token"]
+
+    def headers(self, token):
+        return {"Authorization": f"Bearer {token}"}
+
+    def valid_transport(self):
+        return {
+            "transport_type": "sgr",
+            "provider": "Kenya Railways",
+            "origin": "Nairobi",
+            "destination": "Mombasa",
+            "estimated_fare": 1500,
+            "duration_minutes": 300,
+            "departure_time": "08:00",
+            "arrival_time": "13:00",
+            "booking_url": "https://example.com/book",
+            "notes": "Indicative fare for testing.",
+        }
+
+    def test_transport_admin_requires_authentication(self):
+        response = self.client.get("/api/admin/transport")
+        self.assertEqual(response.status_code, 401)
+
+    def test_traveler_cannot_manage_transport(self):
+        response = self.client.get(
+            "/api/admin/transport",
+            headers=self.headers(self.traveler_token),
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_admin_can_create_transport_option(self):
+        response = self.client.post(
+            "/api/admin/transport",
+            headers=self.headers(self.admin_token),
+            json=self.valid_transport(),
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(
+            response.get_json()["transport_option"]["provider"],
+            "Kenya Railways",
+        )
+
+    def test_admin_can_list_transport_options(self):
+        self.client.post(
+            "/api/admin/transport",
+            headers=self.headers(self.admin_token),
+            json=self.valid_transport(),
+        )
+
+        response = self.client.get(
+            "/api/admin/transport",
+            headers=self.headers(self.admin_token),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["count"], 1)
+
+    def test_admin_can_update_transport_option(self):
+        created = self.client.post(
+            "/api/admin/transport",
+            headers=self.headers(self.admin_token),
+            json=self.valid_transport(),
+        )
+        transport_id = created.get_json()["transport_option"]["id"]
+
+        response = self.client.patch(
+            f"/api/admin/transport/{transport_id}",
+            headers=self.headers(self.admin_token),
+            json={"estimated_fare": 1800, "provider": "Updated Railways"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        updated = response.get_json()["transport_option"]
+        self.assertEqual(updated["provider"], "Updated Railways")
+        self.assertEqual(updated["estimated_fare"], "1800.00")
+
+    def test_admin_can_deactivate_transport_option(self):
+        created = self.client.post(
+            "/api/admin/transport",
+            headers=self.headers(self.admin_token),
+            json=self.valid_transport(),
+        )
+        transport_id = created.get_json()["transport_option"]["id"]
+
+        response = self.client.patch(
+            f"/api/admin/transport/{transport_id}",
+            headers=self.headers(self.admin_token),
+            json={"is_active": False},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(
+            response.get_json()["transport_option"]["is_active"]
+        )
+
+    def test_invalid_transport_type_is_rejected(self):
+        data = self.valid_transport()
+        data["transport_type"] = "train"
+
+        response = self.client.post(
+            "/api/admin/transport",
+            headers=self.headers(self.admin_token),
+            json=data,
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_negative_transport_fare_is_rejected(self):
+        data = self.valid_transport()
+        data["estimated_fare"] = -100
+
+        response = self.client.post(
+            "/api/admin/transport",
+            headers=self.headers(self.admin_token),
+            json=data,
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_same_origin_and_destination_are_rejected(self):
+        data = self.valid_transport()
+        data["destination"] = "Nairobi"
+
+        response = self.client.post(
+            "/api/admin/transport",
+            headers=self.headers(self.admin_token),
+            json=data,
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_admin_can_list_inactive_transport_options(self):
+        data = self.valid_transport()
+        data["is_active"] = False
+
+        self.client.post(
+            "/api/admin/transport",
+            headers=self.headers(self.admin_token),
+            json=data,
+        )
+
+        response = self.client.get(
+            "/api/admin/transport",
+            headers=self.headers(self.admin_token),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["count"], 1)
+        self.assertFalse(
+            response.get_json()["transport_options"][0]["is_active"]
+        )
 
 
 if __name__ == "__main__":

@@ -288,3 +288,25 @@ class GeneratedItinerary(db.Model):
     created_at = db.Column(
         db.DateTime(timezone=True), default=utc_now, nullable=False
     )
+
+
+class TransportOption(db.Model):
+    """A curated transport option for travel within Kenya."""
+
+    __tablename__ = "transport_options"
+
+    id = db.Column(db.Integer, primary_key=True)
+    transport_type = db.Column(db.String(30), nullable=False, index=True)
+    provider = db.Column(db.String(150), nullable=False)
+    origin = db.Column(db.String(150), nullable=False, index=True)
+    destination = db.Column(db.String(150), nullable=False, index=True)
+    estimated_fare = db.Column(db.Numeric(10, 2), nullable=False)
+    duration_minutes = db.Column(db.Integer)
+    departure_time = db.Column(db.String(20))
+    arrival_time = db.Column(db.String(20))
+    booking_url = db.Column(db.String(500))
+    notes = db.Column(db.Text)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    created_at = db.Column(
+        db.DateTime(timezone=True), default=utc_now, nullable=False
+    )

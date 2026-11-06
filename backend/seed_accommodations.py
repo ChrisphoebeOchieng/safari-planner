@@ -38,7 +38,6 @@ ACCOMMODATIONS = [
         "rate": None,
         "website": "https://www.the-maji.com/",
         "image": "https://www.the-maji.com/wp-content/uploads/2025/11/The-Maji-HDR-52-scaled.jpg",
-        "image": None,
         "featured": True,
     },
     {
@@ -49,6 +48,7 @@ ACCOMMODATIONS = [
         "description": "Small beach lodge with Swahili-inspired rooms and a swimming pool. Contact the property for current rates.",
         "rate": None,
         "website": "https://www.dianiblue.com/",
+        "image": "https://www.expertafrica.com/images/lodge/18538.jpg",
         "featured": False,
     },
     {
@@ -59,6 +59,7 @@ ACCOMMODATIONS = [
         "description": "Kenya Wildlife Service accommodation. Published resident rate: KES 10,000 per night. Confirm current rates before travel.",
         "rate": 10000,
         "website": "https://reservations.kws.go.ke/location/amboseli-national-park",
+        "image": "https://reservations.kws.go.ke/uploads/0000/26/2024/06/07/kilimanjaro-annex-2-kws.jpg",
         "featured": True,
     },
     {
@@ -80,6 +81,7 @@ ACCOMMODATIONS = [
         "description": "Kenya Wildlife Service mountain accommodation. Published resident rate: KES 6,000 per night. Confirm current rates before travel.",
         "rate": 6000,
         "website": "https://reservations.kws.go.ke/location/mt-kenya",
+        "image": "https://reservations.kws.go.ke/uploads/0000/26/2024/06/07/02042024-2125-edited.jpg",
         "featured": True,
     },
     {

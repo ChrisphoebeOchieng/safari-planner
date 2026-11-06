@@ -63,9 +63,27 @@ def recommend_destinations(travel_style=None, interests=None, budget=None,
         name = (destination.name or "").lower()
         searchable_text = f"{name} {category} {description}"
 
-        if category in preferred_categories:
+        direct_style_match = category in preferred_categories
+
+        wildlife_keywords = (
+            "wildlife", "safari", "birdlife", "flamingo",
+            "elephant", "lion", "game drive",
+        )
+
+        related_style_match = (
+            travel_style == "Wildlife & Safari"
+            and any(keyword in searchable_text for keyword in wildlife_keywords)
+        )
+
+        if preferred_categories and not (direct_style_match or related_style_match):
+            continue
+
+        if direct_style_match:
             score += 40
             reasons.append("Matches your preferred travel style")
+        elif related_style_match:
+            score += 30
+            reasons.append("Offers wildlife and birdlife experiences")
 
         matched_interests = [
             interest for interest in normalized_interests

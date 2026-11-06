@@ -1,0 +1,374 @@
+.transport-page {
+  padding-top: 55px;
+  padding-bottom: 90px;
+}
+
+.transport-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 30px;
+  min-height: 270px;
+  padding: 48px 55px;
+  background: var(--cream-deep);
+}
+
+.transport-hero__content {
+  max-width: 620px;
+}
+
+.transport-hero h1 {
+  margin: 20px 0 15px;
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: clamp(42px, 6vw, 68px);
+  font-weight: 400;
+  line-height: 1.05;
+}
+
+.transport-hero h1 em,
+.transport-results-heading h2 em {
+  color: var(--olive);
+  font-weight: 400;
+}
+
+.transport-hero p {
+  max-width: 510px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.9;
+}
+
+.transport-hero__symbol {
+  color: var(--olive);
+  font-family: var(--serif);
+  font-size: 115px;
+  line-height: 1;
+}
+
+.transport-search {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  align-items: end;
+  gap: 13px;
+  margin: 28px 0 55px;
+  padding: 22px;
+  border: 1px solid var(--line);
+  background: white;
+}
+
+.transport-search label {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.transport-search input,
+.transport-search select {
+  width: 100%;
+  min-width: 0;
+  height: 45px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: white;
+  color: var(--ink);
+  font: 12px Arial, sans-serif;
+}
+
+.transport-search button {
+  min-height: 45px;
+  padding: 0 20px;
+  border: 0;
+  background: var(--olive);
+  color: white;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.transport-search button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.transport-results-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.transport-results-heading h2 {
+  margin: 13px 0 0;
+  font-family: var(--serif);
+  font-size: 36px;
+  font-weight: 400;
+}
+
+.transport-results-count {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.transport-type-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin: 25px 0;
+}
+
+.transport-type-filters button {
+  padding: 10px 17px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.transport-type-filters button.is-active {
+  border-color: var(--olive);
+  background: var(--olive);
+  color: white;
+}
+
+.transport-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 17px;
+}
+
+.transport-card {
+  min-width: 0;
+  padding: 24px;
+  border: 1px solid var(--line);
+  background: white;
+}
+
+.transport-card__top,
+.transport-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.transport-card__type {
+  padding: 6px 10px;
+  background: var(--cream-deep);
+  color: var(--olive);
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.transport-card__provider {
+  color: var(--muted);
+  font-size: 11px;
+  text-align: right;
+}
+
+.transport-card__route {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 13px;
+  margin: 27px 0;
+}
+
+.transport-card__route > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.transport-card__route > div:last-child {
+  text-align: right;
+}
+
+.transport-card__route span:not(.transport-card__arrow) {
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+
+.transport-card__route strong {
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 21px;
+  font-weight: 400;
+}
+
+.transport-card__route small {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.transport-card__arrow {
+  color: var(--olive);
+  font-size: 18px;
+}
+
+.transport-card__details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 17px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.transport-card__details > div {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.transport-card__details span {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.transport-card__details strong {
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.transport-card__notes {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.transport-card__footer {
+  margin-top: 17px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.transport-card__footer a {
+  color: var(--olive);
+  font-size: 10px;
+  text-decoration: none;
+}
+
+.transport-card__footer a:hover {
+  text-decoration: underline;
+}
+
+.transport-card__no-link {
+  text-align: right;
+}
+
+.transport-status {
+  padding: 25px;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.transport-status--error {
+  color: #9b3939;
+}
+
+.transport-empty {
+  padding: 55px 25px;
+  border: 1px solid var(--line);
+  background: white;
+  text-align: center;
+}
+
+.transport-empty > span {
+  color: var(--olive);
+  font-family: var(--serif);
+  font-size: 42px;
+}
+
+.transport-empty h3 {
+  margin: 12px 0;
+  font-family: var(--serif);
+  font-size: 25px;
+  font-weight: 400;
+}
+
+.transport-empty p {
+  max-width: 430px;
+  margin: 0 auto;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.8;
+}
+
+.transport-disclaimer {
+  margin-top: 25px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.8;
+}
+
+@media (max-width: 900px) {
+  .transport-search {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .transport-search button {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .transport-page {
+    padding-top: 25px;
+    padding-bottom: 55px;
+  }
+
+  .transport-hero {
+    min-height: 220px;
+    padding: 28px 22px;
+  }
+
+  .transport-hero__symbol {
+    display: none;
+  }
+
+  .transport-hero h1 {
+    font-size: 43px;
+  }
+
+  .transport-search {
+    grid-template-columns: 1fr;
+    margin-bottom: 40px;
+    padding: 16px;
+  }
+
+  .transport-search button {
+    grid-column: auto;
+  }
+
+  .transport-results-heading h2 {
+    font-size: 29px;
+  }
+
+  .transport-options {
+    grid-template-columns: 1fr;
+  }
+
+  .transport-card {
+    padding: 19px;
+  }
+
+  .transport-card__route strong {
+    font-size: 18px;
+  }
+
+  .transport-card__footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

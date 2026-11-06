@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import AuthPage from './AuthPage';
 import AdminDashboard from './AdminDashboard';
+import TransportPage from './TransportPage';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import heroImage from './assets/hero.png';
 import './App.css';
@@ -683,6 +684,7 @@ function App() {
 
   const isHomePage = pathname === "/";
   const isExplorePage = pathname === "/explore";
+  const isTransportPage = pathname === "/transport";
   const isPlannerPage = pathname === "/plan-trip";
   const isMyTripsPage =
     pathname === "/my-trips" || pathname.startsWith("/my-trips/");
@@ -921,6 +923,7 @@ function App() {
         <nav className={`main-nav ${mobileOpen ? 'main-nav--open' : ''}`}>
           <Link to="/" onClick={() => setMobileOpen(false)}>Home</Link>
           <Link to="/explore" onClick={() => setMobileOpen(false)}>Explore</Link>
+          <Link to="/transport" onClick={() => setMobileOpen(false)}>Transport</Link>
           <Link to="/plan-trip" onClick={() => setMobileOpen(false)}>Plan a trip</Link>
           <Link to="/my-trips" onClick={() => setMobileOpen(false)}>My trips</Link>
           {currentUser ? (
@@ -954,6 +957,7 @@ function App() {
         isHomePage ? "app-main--home" :
         isExplorePage ? "app-main--explore" :
         isPlannerPage ? "app-main--planner" :
+        isTransportPage ? "app-main--transport" :
         isMyTripsPage ? "app-main--my-trips" :
         isDestinationPage ? "app-main--destination" : "app-main--not-found"
       }`}>
@@ -979,6 +983,7 @@ function App() {
           )
         ) : (
           <>
+        {isTransportPage && <TransportPage />}
         {isDestinationPage && (
           <section className="destination-detail section-shell">
             <Link className="text-link destination-detail__back" to="/explore">

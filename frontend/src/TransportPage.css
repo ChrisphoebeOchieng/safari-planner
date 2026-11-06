@@ -172,11 +172,21 @@
 }
 
 .transport-card__route {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   align-items: center;
-  gap: 13px;
+  gap: 12px;
   margin: 27px 0;
+  min-height: 58px;
+}
+
+.transport-card__route > div:first-child {
+  padding-right: 22px;
+}
+
+.transport-card__route > div:last-child {
+  padding-left: 22px;
 }
 
 .transport-card__route > div {
@@ -210,8 +220,15 @@
 }
 
 .transport-card__arrow {
-  color: var(--olive);
-  font-size: 18px;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: block;
+  width: 44px;
+  height: 1px;
+  background: var(--olive);
+  pointer-events: none;
 }
 
 .transport-card__details {
@@ -409,4 +426,16 @@
     height: 175px;
     margin: -19px -19px 19px;
   }
+}
+
+
+.transport-card__fare-link {
+  color: var(--olive);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.transport-card__fare-link:hover {
+  text-decoration: underline;
 }

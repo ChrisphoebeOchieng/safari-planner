@@ -42,6 +42,7 @@ const emptyTransport = {
   departure_time: '',
   arrival_time: '',
   booking_url: '',
+  image_url: '',
   notes: '',
   is_active: true,
 };
@@ -162,6 +163,7 @@ function AdminDashboard({ token, apiBaseUrl, onLogout }) {
         departure_time: item.departure_time || '',
         arrival_time: item.arrival_time || '',
         booking_url: item.booking_url || '',
+        image_url: item.image_url || '',
         notes: item.notes || '',
         is_active: Boolean(item.is_active),
       });
@@ -650,6 +652,7 @@ function AdminDashboard({ token, apiBaseUrl, onLogout }) {
                       <label>Departure time<input maxLength="20" placeholder="e.g. 08:00" value={form.departure_time} onChange={(e) => setForm({ ...form, departure_time: e.target.value })} /></label>
                       <label>Arrival time<input maxLength="20" placeholder="e.g. 13:00" value={form.arrival_time} onChange={(e) => setForm({ ...form, arrival_time: e.target.value })} /></label>
                       <label>Official booking URL<input type="url" required={form.is_active} placeholder="https://..." value={form.booking_url} onChange={(e) => setForm({ ...form, booking_url: e.target.value })} /></label>
+                      <label>Provider vehicle image URL<input type="url" placeholder="https://..." value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} /></label>
                       <label>Notes<textarea rows="3" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></label>
                       <label className="admin-checkbox">
                         <input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} />

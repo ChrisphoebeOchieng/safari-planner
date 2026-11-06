@@ -565,6 +565,12 @@ def validate_transport_option(data, item=None):
             return None, error
         values["booking_url"] = value
 
+    if "image_url" in data:
+        value, error = optional_url(data, "image_url")
+        if error:
+            return None, error
+        values["image_url"] = value
+
     if "is_active" in data:
         value, error = optional_boolean(data, "is_active")
         if error:
@@ -610,6 +616,7 @@ def serialize_admin_transport(item):
         "departure_time": item.departure_time,
         "arrival_time": item.arrival_time,
         "booking_url": item.booking_url,
+        "image_url": item.image_url,
         "notes": item.notes,
         "is_active": item.is_active,
     }

@@ -77,11 +77,24 @@ function TransportPage() {
         throw new Error(result.error || 'Unable to load transport options.');
       }
 
-      setOptions(
-        Array.isArray(result.transport_options)
-          ? result.transport_options
-          : []
-      );
+      const providerOrder = {
+        'Kenya Airways': 1,
+        'Jambojet': 2,
+        'Mash Poa': 3,
+        'Easy Coach': 4,
+        'Modern Coast': 5,
+        'Kenya Railways – Madaraka Express': 6,
+      };
+
+      const transportOptions = Array.isArray(result.transport_options)
+        ? [...result.transport_options].sort(
+            (a, b) =>
+              (providerOrder[a.provider] ?? 99) -
+              (providerOrder[b.provider] ?? 99)
+          )
+        : [];
+
+      setOptions(transportOptions);
       setDisclaimer(result.disclaimer || '');
     } catch (err) {
       setOptions([]);
@@ -117,7 +130,7 @@ function TransportPage() {
             that suits your route, time and budget.
           </p>
         </div>
-        <div className="transport-hero__symbol" aria-hidden="true">↗</div>
+        
       </div>
 
       <form className="transport-search" onSubmit={loadTransport}>
@@ -257,14 +270,8 @@ function TransportPage() {
               <div className="transport-card__image-wrap">
                 <img
                   className="transport-card__image"
-                  src={transportPhotos[option.transport_type] || transportPhotos.flight}
-                  alt={
-                    option.transport_type === 'flight'
-                      ? 'Aircraft in flight'
-                      : option.transport_type === 'bus'
-                        ? 'Passenger coach bus'
-                        : 'Passenger train'
-                  }
+                  src={option.image_url || transportPhotos[option.transport_type] || transportPhotos.flight}
+                  alt={`${option.provider} transport vehicle`}
                   loading="lazy"
                 />
                 <span className="transport-card__image-label">
@@ -291,9 +298,7 @@ function TransportPage() {
                   {option.departure_time && <small>{option.departure_time}</small>}
                 </div>
 
-                <span className="transport-card__arrow" aria-hidden="true">
-                  ───→
-                </span>
+                <span className="transport-card__arrow" aria-hidden="true"></span>
 
                 <div>
                   <span>TO</span>
@@ -305,11 +310,20 @@ function TransportPage() {
               <div className="transport-card__details">
                 <div>
                   <span>Estimated fare</span>
-                  <strong>{formatFare(option.estimated_fare)}</strong>
-                </div>
-                <div>
-                  <span>Journey duration</span>
-                  <strong>{formatDuration(option.duration_minutes)}</strong>
+                  {option.estimated_fare != null ? (
+                    <strong>{formatFare(option.estimated_fare)}</strong>
+                  ) : option.booking_url ? (
+                    <a
+                      className="transport-card__fare-link"
+                      href={option.booking_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Visit provider ↗
+                    </a>
+                  ) : (
+                    <strong>Contact provider</strong>
+                  )}
                 </div>
               </div>
 
@@ -318,20 +332,7 @@ function TransportPage() {
               )}
 
               <div className="transport-card__footer">
-                <span>Indicative fare · KES</span>
-                {option.booking_url ? (
-                  <a
-                    href={option.booking_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Visit provider <span aria-hidden="true">↗</span>
-                  </a>
-                ) : (
-                  <span className="transport-card__no-link">
-                    Contact provider for details
-                  </span>
-                )}
+                <span>Confirm current fares with the operator.</span>
               </div>
             </article>
           ))}

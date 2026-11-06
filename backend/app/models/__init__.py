@@ -305,6 +305,7 @@ class TransportOption(db.Model):
     departure_time = db.Column(db.String(20))
     arrival_time = db.Column(db.String(20))
     booking_url = db.Column(db.String(500))
+    image_url = db.Column(db.String(500))
     notes = db.Column(db.Text)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(

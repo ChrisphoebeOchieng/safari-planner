@@ -28,6 +28,7 @@ def serialize_transport_option(item):
         "departure_time": item.departure_time,
         "arrival_time": item.arrival_time,
         "booking_url": item.booking_url,
+        "image_url": item.image_url,
         "notes": item.notes,
         "fare_type": "indicative",
     }

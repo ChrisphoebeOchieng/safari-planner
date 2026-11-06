@@ -4,6 +4,7 @@ import AdminDashboard from './AdminDashboard';
 import TransportPage from './TransportPage';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import heroImage from './assets/hero.png';
+import safariHeroImage from './assets/safari-hero.jpg';
 import './App.css';
 
 // ADDED: Override this through VITE_API_BASE_URL when deploying.
@@ -62,6 +63,14 @@ function Icon({ name, size = 20 }) {
 
 function App() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState(
+    () => localStorage.getItem('safari_planner_theme') === 'dark'
+  );
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = darkMode ? 'dark' : 'light';
+    localStorage.setItem('safari_planner_theme', darkMode ? 'dark' : 'light');
+  }, [darkMode]);
 
   const [authToken, setAuthToken] = useState(
     () => sessionStorage.getItem('safari_planner_token') || ''
@@ -947,6 +956,16 @@ function App() {
               Sign in
             </Link>
           )}
+          <button
+            className="nav-theme-toggle"
+            type="button"
+            onClick={() => setDarkMode((current) => !current)}
+            aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+            title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            <span aria-hidden="true">{darkMode ? '☀' : '☾'}</span>
+            {darkMode ? 'Light mode' : 'Dark mode'}
+          </button>
           <Link className="nav-cta" to="/plan-trip" onClick={() => setMobileOpen(false)}>
             Start planning <Icon name="arrow" size={16} />
           </Link>
@@ -1202,31 +1221,32 @@ function App() {
         <section className="hero" id="home">
           <img
             className="hero__image"
-            src={heroImage}
-            alt="African safari landscape"
+            src={safariHeroImage}
+            alt="Lion in the Kenyan savannah"
           />
           <div className="hero__overlay" />
 
           <div className="hero__content">
             <span className="eyebrow eyebrow--light">
               <span className="eyebrow__line" />
-              DISCOVER AFRICA DIFFERENTLY
+              EXPLORE KENYA
             </span>
 
             <h1>
-              Not just a trip.
+              Plan Your
               <br />
-              <em>Your own story.</em>
+              <em>Kenyan Safari.</em>
             </h1>
 
             <p className="hero__description">
-              From wild open plains to quiet coastal hideaways, create a
-              journey that feels entirely yours.
+              Discover Kenya’s iconic wildlife, breathtaking landscapes
+              and unique safari experiences. Plan, personalize and
+              manage your journey — all in one place.
             </p>
 
             <div className="hero__actions">
               <button className="button button--gold" onClick={scrollToPlanner}>
-                Curate your journey <Icon name="arrow" size={17} />
+                Plan a trip <Icon name="arrow" size={17} />
               </button>
               <a className="hero__text-link" href="#destinations">
                 Explore destinations <Icon name="arrowRight" size={18} />

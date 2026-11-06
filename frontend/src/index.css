@@ -72,3 +72,46 @@ img {
   color: #fff;
   background: var(--olive);
 }
+
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --cream: #171e18;
+  --cream-deep: #222c22;
+  --ink: #eeeade;
+  --olive: #c5ad75;
+  --olive-dark: #d2bd87;
+  --gold: #d4b66e;
+  --muted: #aaa99a;
+  --line: #394438;
+  background: #171e18;
+  color: var(--ink);
+}
+
+:root[data-theme="dark"] body {
+  background: #171e18;
+  color: var(--ink);
+}
+
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] textarea {
+  color: var(--ink);
+  background: #222c22;
+  border-color: var(--line);
+}
+
+:root[data-theme="dark"] input::placeholder,
+:root[data-theme="dark"] textarea::placeholder {
+  color: #aaa99a;
+}
+
+:root[data-theme="dark"] option {
+  color: var(--ink);
+  background: #222c22;
+}
+
+:root[data-theme="dark"] ::selection {
+  color: #171e18;
+  background: #d4b66e;
+}

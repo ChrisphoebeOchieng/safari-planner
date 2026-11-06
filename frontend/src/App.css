@@ -2834,3 +2834,332 @@
   color: white;
   cursor: pointer;
 }
+
+/* Homepage refinements */
+
+.hero {
+  min-height: clamp(650px, 65vw, 790px);
+}
+
+.hero__image {
+  object-position: center 54%;
+}
+
+.hero__overlay {
+  background:
+    linear-gradient(90deg, rgba(19, 26, 19, 0.84) 0%, rgba(25, 31, 23, 0.63) 43%, rgba(29, 31, 22, 0.12) 100%),
+    linear-gradient(0deg, rgba(19, 25, 18, 0.42), transparent 45%);
+}
+
+.hero__content {
+  width: min(780px, 86%);
+  margin-left: max(10.2%, calc((100vw - 1200px) / 2));
+  padding-top: 100px;
+  padding-bottom: 110px;
+}
+
+.hero h1 {
+  font-size: clamp(60px, 7vw, 100px);
+  letter-spacing: -3px;
+  line-height: 0.99;
+}
+
+.hero__description {
+  max-width: 455px;
+  font-size: 15px;
+  line-height: 1.95;
+}
+
+.hero__actions {
+  margin-top: 36px;
+}
+
+.hero__footnote {
+  margin-top: 64px;
+}
+
+.hero__index,
+.hero__scroll {
+  bottom: 32px;
+}
+
+.intro-strip {
+  min-height: 86px;
+  background: #eeece2;
+}
+
+.destinations .section-heading {
+  margin-bottom: 52px;
+}
+
+@media (max-width: 900px) {
+  .hero__content {
+    margin-left: 7%;
+  }
+}
+
+@media (max-width: 680px) {
+  .hero {
+    min-height: 670px;
+  }
+
+  .hero__image {
+    object-position: 58% center;
+  }
+
+  .hero__overlay {
+    background:
+      linear-gradient(90deg, rgba(19, 26, 19, 0.82), rgba(25, 31, 23, 0.42)),
+      linear-gradient(0deg, rgba(19, 25, 18, 0.48), transparent 55%);
+  }
+
+  .hero__content {
+    width: 88%;
+    margin-left: 6%;
+    padding: 75px 0 90px;
+  }
+
+  .hero h1 {
+    font-size: clamp(49px, 12vw, 66px);
+    letter-spacing: -2px;
+  }
+
+  .hero__description {
+    font-size: 13px;
+  }
+
+  .hero__footnote {
+    margin-top: 42px;
+  }
+
+  .intro-strip {
+    min-height: 77px;
+  }
+
+  .destinations .section-heading {
+    margin-bottom: 36px;
+  }
+}
+
+/* Final safari homepage direction */
+.site-header {
+  min-height: 100px;
+  padding-left: 4.8%;
+  padding-right: 2.8%;
+  background: #f7f1e6;
+}
+
+.brand__mark {
+  width: 58px;
+  height: 58px;
+}
+
+.brand__name {
+  font-size: 29px;
+}
+
+.main-nav {
+  gap: clamp(20px, 2.8vw, 48px);
+  font-size: 14px;
+}
+
+.nav-cta {
+  min-height: 62px;
+  padding: 0 30px;
+  background: #30451b;
+}
+
+.hero {
+  min-height: clamp(680px, 46.5vw, 790px);
+}
+
+.hero__image {
+  object-fit: cover;
+  object-position: center center;
+  transform: none;
+}
+
+.hero__overlay {
+  background:
+    linear-gradient(90deg, rgba(25, 29, 17, .83) 0%, rgba(31, 33, 20, .58) 42%, rgba(31, 33, 20, .04) 100%),
+    linear-gradient(0deg, rgba(25, 29, 17, .25), transparent 42%);
+}
+
+.hero__content {
+  width: min(700px, 86%);
+  margin-left: 7.2%;
+  padding: 85px 0 100px;
+}
+
+.hero h1 {
+  max-width: 720px;
+  font-size: clamp(62px, 6.2vw, 92px);
+  line-height: 1.02;
+  letter-spacing: -3px;
+}
+
+.hero h1 em {
+  color: #e1b75f;
+}
+
+.hero__description {
+  max-width: 600px;
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+.hero__actions {
+  gap: 38px;
+  margin-top: 30px;
+}
+
+.hero__actions .button--gold {
+  min-height: 64px;
+  padding: 0 34px;
+  font-size: 15px;
+  background: #e5b84f;
+}
+
+.hero__text-link {
+  font-size: 14px;
+}
+
+.hero__footnote {
+  margin-top: 60px;
+}
+
+@media (max-width: 900px) {
+  .site-header {
+    min-height: 82px;
+    padding: 0 5%;
+  }
+
+  .brand__mark {
+    width: 43px;
+    height: 43px;
+  }
+
+  .brand__name {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 680px) {
+  .hero {
+    min-height: 670px;
+  }
+
+  .hero__content {
+    width: 88%;
+    margin-left: 6%;
+    padding: 75px 0 90px;
+  }
+
+  .hero h1 {
+    font-size: clamp(48px, 12vw, 66px);
+  }
+
+  .hero__description {
+    font-size: 14px;
+  }
+}
+
+
+/* Dark safari theme */
+.nav-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 0 10px;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.nav-theme-toggle span {
+  font-size: 17px;
+}
+
+.nav-theme-toggle:hover {
+  border-color: var(--gold);
+}
+
+:root[data-theme="dark"] .site-header,
+:root[data-theme="dark"] .main-nav {
+  color: var(--ink);
+  background: #171e18;
+  border-color: var(--line);
+}
+
+:root[data-theme="dark"] .intro-strip,
+:root[data-theme="dark"] .destinations,
+:root[data-theme="dark"] .planner,
+:root[data-theme="dark"] .saved-trips,
+:root[data-theme="dark"] .auth-page,
+:root[data-theme="dark"] .app-main {
+  color: var(--ink);
+  background-color: #171e18;
+}
+
+:root[data-theme="dark"] .destination-card,
+:root[data-theme="dark"] .recommendation-panel,
+:root[data-theme="dark"] .my-trips-dashboard,
+:root[data-theme="dark"] .my-trips-stat,
+:root[data-theme="dark"] .saved-itinerary-detail,
+:root[data-theme="dark"] .planner-form,
+:root[data-theme="dark"] .recommendation-form,
+:root[data-theme="dark"] .accommodation-card,
+:root[data-theme="dark"] .destination-detail__content {
+  color: var(--ink);
+  background-color: #222c22;
+  border-color: var(--line);
+}
+
+:root[data-theme="dark"] .destination-card h3,
+:root[data-theme="dark"] .section-heading h2,
+:root[data-theme="dark"] .philosophy__content h2,
+:root[data-theme="dark"] .planner__heading h2,
+:root[data-theme="dark"] .saved-trips__heading h2,
+:root[data-theme="dark"] .destination-detail__content h1,
+:root[data-theme="dark"] .recommendation-panel h2 {
+  color: var(--ink);
+}
+
+:root[data-theme="dark"] .section-heading__description,
+:root[data-theme="dark"] .destination-card__body p,
+:root[data-theme="dark"] .planner__heading p,
+:root[data-theme="dark"] .saved-trips__heading p {
+  color: #c0c0b2;
+}
+
+:root[data-theme="dark"] .philosophy {
+  color: var(--ink);
+  background: #20291f;
+}
+
+:root[data-theme="dark"] .explore-tools,
+:root[data-theme="dark"] .my-trips-toolbar,
+:root[data-theme="dark"] .generated-itinerary,
+:root[data-theme="dark"] .itinerary-day {
+  color: var(--ink);
+  background-color: #222c22;
+  border-color: var(--line);
+}
+
+:root[data-theme="dark"] .site-footer {
+  background: #101610;
+}
+
+@media (max-width: 680px) {
+  .nav-theme-toggle {
+    justify-content: flex-start;
+    min-height: 44px;
+    margin-top: 10px;
+  }
+}

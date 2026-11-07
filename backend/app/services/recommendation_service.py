@@ -14,20 +14,53 @@ TRAVEL_STYLE_CATEGORIES = {
     "Relaxation & Wellness": ["coastal escape", "nature & adventure"],
 }
 
+INTEREST_KEYWORDS = {
+    "wildlife": ["wildlife", "animals", "lion", "elephant", "safari", "game drive"],
+    "beach": ["beach", "coast", "ocean", "sea", "swimming"],
+    "birdlife": ["bird", "birds", "birdlife", "flamingo"],
+    "adventure": ["adventure", "hiking", "climbing", "trekking", "rafting"],
+    "nature": ["nature", "forest", "landscape", "mountain", "waterfall"],
+    "culture": ["culture", "heritage", "community", "traditional", "history"],
+    "relaxation": ["relaxation", "wellness", "spa", "peaceful", "retreat"],
+}
 
-def recommend_destinations(travel_style=None, interests=None, budget=None,
-                           duration_days=1, limit=6):
-    """Rank Kenyan destinations using category, text and budget relevance."""
-    interests = interests or []
 
+def _normalise_interests(interests):
+    """Clean interests and remove duplicates while preserving their order."""
     if isinstance(interests, str):
-        interests = [interests]
+        interests = interests.split(",")
 
-    normalized_interests = [
-        item.strip().lower()
-        for item in interests
-        if isinstance(item, str) and item.strip()
-    ]
+    cleaned = []
+    seen = set()
+
+    for item in interests or []:
+        if not isinstance(item, str):
+            continue
+
+        interest = item.strip().lower()
+
+        if interest and interest not in seen:
+            cleaned.append(interest)
+            seen.add(interest)
+
+    return cleaned
+
+
+def _interest_matches(interest, searchable_text):
+    """Check direct and related keyword matches for an interest."""
+    keywords = INTEREST_KEYWORDS.get(interest, [interest])
+    return any(keyword in searchable_text for keyword in keywords)
+
+
+def recommend_destinations(
+    travel_style=None,
+    interests=None,
+    budget=None,
+    duration_days=1,
+    limit=6,
+):
+    """Rank Kenyan destinations using travel preferences and budget."""
+    normalized_interests = _normalise_interests(interests)
 
     try:
         duration_days = max(1, int(duration_days))
@@ -35,7 +68,12 @@ def recommend_destinations(travel_style=None, interests=None, budget=None,
         duration_days = 1
 
     try:
-        budget_value = Decimal(str(budget)) if budget not in (None, "") else None
+        budget_value = (
+            Decimal(str(budget))
+            if budget not in (None, "")
+            else None
+        )
+
         if budget_value is not None and (
             not budget_value.is_finite() or budget_value < 0
         ):
@@ -72,10 +110,15 @@ def recommend_destinations(travel_style=None, interests=None, budget=None,
 
         related_style_match = (
             travel_style == "Wildlife & Safari"
-            and any(keyword in searchable_text for keyword in wildlife_keywords)
+            and any(
+                keyword in searchable_text
+                for keyword in wildlife_keywords
+            )
         )
 
-        if preferred_categories and not (direct_style_match or related_style_match):
+        if preferred_categories and not (
+            direct_style_match or related_style_match
+        ):
             continue
 
         if direct_style_match:
@@ -86,8 +129,9 @@ def recommend_destinations(travel_style=None, interests=None, budget=None,
             reasons.append("Offers wildlife and birdlife experiences")
 
         matched_interests = [
-            interest for interest in normalized_interests
-            if interest in searchable_text
+            interest
+            for interest in normalized_interests
+            if _interest_matches(interest, searchable_text)
         ]
 
         if matched_interests:
@@ -107,7 +151,9 @@ def recommend_destinations(travel_style=None, interests=None, budget=None,
         )
 
         estimated_total = (
-            daily_cost * duration_days if daily_cost is not None else None
+            daily_cost * duration_days
+            if daily_cost is not None
+            else None
         )
 
         if budget_value is not None and daily_cost is not None:

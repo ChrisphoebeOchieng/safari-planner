@@ -101,6 +101,11 @@ function App() {
   const [recommendations, setRecommendations] = useState([]);
   const [recommendationsLoading, setRecommendationsLoading] = useState(false);
   const [recommendationsError, setRecommendationsError] = useState('');
+  const [assistantInput, setAssistantInput] = useState('');
+  const [assistantResponse, setAssistantResponse] = useState(null);
+  const [assistantLoading, setAssistantLoading] = useState(false);
+  const [assistantError, setAssistantError] = useState('');
+
   const [accommodations, setAccommodations] = useState([]);
   const [accommodationsLoading, setAccommodationsLoading] = useState(false);
   const [accommodationsError, setAccommodationsError] = useState('');
@@ -956,7 +961,7 @@ function App() {
               Sign in
             </Link>
           )}
-          <button
+<button
             className="nav-theme-toggle"
             type="button"
             onClick={() => setDarkMode((current) => !current)}
@@ -1407,6 +1412,145 @@ function App() {
                 </p>
               </div>
 
+              <section className="safari-assistant">
+                <div className="safari-assistant__intro">
+                  <span className="eyebrow">YOUR PERSONAL TRAVEL COMPANION</span>
+                  <h3>Tell us about your <em>dream safari.</em></h3>
+                  <p>
+                    Describe the experience you're looking for, your budget
+                    or how many days you'd like to travel.
+                  </p>
+                </div>
+
+                <form
+                  className="safari-assistant__form"
+                  onSubmit={async (event) => {
+                    event.preventDefault();
+                    if (!assistantInput.trim() || assistantLoading) return;
+
+                    setAssistantLoading(true);
+                    setAssistantError('');
+                    setAssistantResponse(null);
+
+                    try {
+                      const response = await fetch(
+                        `${API_BASE_URL}/assistant`,
+                        {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            message: assistantInput.trim(),
+                          }),
+                        }
+                      );
+
+                      const result = await response.json();
+
+                      if (!response.ok) {
+                        throw new Error(
+                          result.error || 'Unable to process your request.'
+                        );
+                      }
+
+                      setAssistantResponse(result);
+                    } catch (error) {
+                      setAssistantError(
+                        error.message === 'Failed to fetch'
+                          ? 'Could not connect to the travel assistant. Check that the backend is running.'
+                          : error.message || 'Something went wrong.'
+                      );
+                    } finally {
+                      setAssistantLoading(false);
+                    }
+                  }}
+                >
+                  <textarea
+                    value={assistantInput}
+                    onChange={(event) => setAssistantInput(event.target.value)}
+                    placeholder="e.g. I want a 4-day wildlife safari with a budget of KES 60,000..."
+                    rows={3}
+                    maxLength={2000}
+                    required
+                  />
+                  <button
+                    type="submit"
+                    disabled={assistantLoading || !assistantInput.trim()}
+                  >
+                    {assistantLoading ? 'Planning your safari...' : 'Find my safari'}
+                    <Icon name="arrowRight" size={17} />
+                  </button>
+                </form>
+
+                {assistantError && (
+                  <p className="recommendation-message" role="alert">
+                    {assistantError}
+                  </p>
+                )}
+
+                {assistantResponse && (
+                  <div className="safari-assistant__response" aria-live="polite">
+                    <p>{assistantResponse.message}</p>
+
+                    <div className="safari-assistant__preferences">
+                      {assistantResponse.preferences.travel_style && (
+                        <span>{assistantResponse.preferences.travel_style}</span>
+                      )}
+                      <span>{assistantResponse.preferences.duration_days} days</span>
+                      {assistantResponse.preferences.budget !== null && (
+                        <span>
+                          KES {Number(
+                            assistantResponse.preferences.budget
+                          ).toLocaleString('en-KE')}
+                        </span>
+                      )}
+                    </div>
+
+                    {assistantResponse.recommendations.length > 0 && (
+                      <div className="safari-assistant__results">
+                        {assistantResponse.recommendations.map((destination) => (
+                          <article
+                            className="safari-assistant__destination"
+                            key={destination.id}
+                          >
+                            <img
+                              src={destination.image_url || heroImage}
+                              alt={destination.name}
+                              onError={(event) => {
+                                event.currentTarget.onerror = null;
+                                event.currentTarget.src = heroImage;
+                              }}
+                            />
+                            <div>
+                              <span>{destination.category}</span>
+                              <h4>{destination.name}</h4>
+                              <p>{destination.region}, Kenya</p>
+                              <strong>
+                                {destination.estimated_total_cost_kes
+                                  ? `KES ${Number(destination.estimated_total_cost_kes).toLocaleString('en-KE')} estimated total`
+                                  : 'Cost estimate unavailable'}
+                              </strong>
+                              <ul>
+                                {destination.reasons.map((reason) => (
+                                  <li key={reason}>{reason}</li>
+                                ))}
+                              </ul>
+                              <button
+                                type="button"
+                                onClick={() => navigate(
+                                  `/destinations/${destination.id}`
+                                )}
+                              >
+                                Explore destination
+                              </button>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </section>
+
               <form
                 className="recommendation-form"
                 onSubmit={async (event) => {
@@ -1564,6 +1708,10 @@ function App() {
                           <span className="destination-card__category">
                             {destination.category}
                           </span>
+                          <div className="recommendation-match">
+                            <span>Match score</span>
+                            <strong>{destination.recommendation_score}/100</strong>
+                          </div>
                           <h3>{destination.name}</h3>
                           <p>
                             <Icon name="pin" size={15} />
